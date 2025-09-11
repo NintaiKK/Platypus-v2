@@ -25,6 +25,7 @@ class Main:
 
         #Carregar Lista
         def carregar_lista_clientes(self, filtro=None):
+
             # Limpa a treeview
             for item in self.tree_clientes.get_children():
                 self.tree_clientes.delete(item)
@@ -114,7 +115,7 @@ class Main:
             # Focar no campo nome
             cnpj_entry.focus_set()
 
-        # Adicione este método na classe Main para salvar os clientes
+        # Salvar clientes
         def salvar_cliente(self, cnpj, nome, endereço, cidade, telefone, email, responsavel, cpf_responsavel):
             if not nome:
                 messagebox.showerror("Erro", "O campo nome é obrigatório!")
@@ -226,6 +227,42 @@ class Main:
             
             # Carrega a lista de clientes
             self.carregar_lista_clientes()
+
+        #Veículos
+        def novo_veiculo(self):
+
+            self.novo_veiculo_wnd = tk.Toplevel(self.root)
+            self.novo_veiculo_wnd.title("Cadastrar Veículo")
+            self.novo_veiculo_wnd.geometry("500x400")
+            self.novo_veiculo_wnd.resizable(False, False)
+
+            self.novo_veiculo_wnd.transient(self.root)
+            self.novo_veiculo_wnd.grab_set()
+
+            frame = ttk.Frame(self.novo_veiculo_wnd, padding="20")
+            frame.pack(fill=tk.BOTH, expand=True)
+
+            ttk.Label(frame, text="Responsável").grid(row=0, column=0, sticky=tk.W, pady=5)
+            resp_entry = ttk.Entry(frame, widht=40)
+            resp_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+
+            ttk.Button(frame, text="Buscar", command=self.busc_resp).grid(row=0, column=1, sticky=tk.E, pady=5)
+
+            ttk.Label(frame, text="Placa").grid(row=1, column=0, sticky=tk.W, pady=5)
+            placa_entry = ttk.Entry(frame, width=40)
+            placa_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(frame, text="KM").grid(row=2, column=0, sticky=tk.W, pady=5)
+            km_entry = ttk.Entry(frame, width=40)
+            km_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(frame, text="Ano").grid(row=3, column=0, sticky=tk.W, pady=5)
+            ano_entry = ttk.Entry(frame, width=40)
+            ano_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(frame, text="Modelo").grid(row=4, column=0, sticky=tk.W, pady=5)
+            modelo_entry = ttk.Entry(frame, width=40)
+            modelo_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
 
         #Barra menu cabeçalho
         menubar = tk.Menu(self.root)
