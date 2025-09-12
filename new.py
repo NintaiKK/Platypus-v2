@@ -46,6 +46,29 @@ class Main:
             # Adiciona os clientes na treeview
             for cliente in clientes:
                 self.tree_clientes.insert('', tk.END, values=cliente)
+
+        def carregar_lista_veiculos(self, filtro=None):
+
+            # Limpa a treeview
+            for item in self.tree_clientes.get_children():
+                self.tree_clientes.delete(item)
+            
+            # Consulta os clientes no banco de dados
+            if filtro:
+                self.c.execute('''SELECT id, resp_veiculo, placa, km, ano, modelo 
+                                FROM clientes 
+                                WHERE nome LIKE ? OR cnpj LIKE ? 
+                                ORDER BY nome''', (f'%{filtro}%', f'%{filtro}%'))
+            else:
+                self.c.execute('''SELECT id, resp_veiculo, placa, km, ano, modelo 
+                                FROM clientes 
+                                ORDER BY resp_veiculo''')
+            
+            veiculo = self.c.fetchall()
+            
+            # Adiciona os clientes na treeview
+            for veiculo in veiculo:
+                self.tree_veiculo.insert('', tk.END, values=veiculo)
         
         def pesquisar_clientes(self, event=None):
             """Pesquisa clientes conforme texto digitado"""
