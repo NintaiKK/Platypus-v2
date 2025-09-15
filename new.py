@@ -408,6 +408,100 @@ class Main:
             # Carrega a lista de veículos
             self.carregar_lista_veiculos()
 
+        def nova_peca(self):
+
+            self.nova_peca_wnd = tk.Toplevel(self.root)
+            self.nova_peca_wnd.title("Cadastrar peça")
+            self.nova_peca_wnd.geometry("500x400")
+            self.nova_peca_wnd.resizable(False, False)
+
+            self.nova_peca_wnd.transient(self.root)
+            self.nova_peca_wnd.grab_set()
+
+            # Frame principal
+            main_frame = ttk.Frame(self.nova_peca_wnd, padding="10")
+            main_frame.pack(fill=tk.BOTH, expand=True)
+
+            ttk.Label(main_frame, text="Código NF").grid(row=0, column=0, sticky=tk.W, pady=5)
+            cod_nf_entry = ttk.Entry(main_frame, widht=40)
+            cod_nf_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(main_frame, text="Código interno").grid(row=1, column=0, sticky=tk.W, pady=5)
+            cod_in_entry = ttk.Entry(main_frame, widht=40)
+            cod_in_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(main_frame, text="Descrição").grid(row=2, column=0, sticky=tk.W, pady=5)
+            descr_entry = ttk.Entry(main_frame, widht=40)
+            descr_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(main_frame, text="Fabricante").grid(row=3, column=0, sticky=tk.W, pady=5)
+            fabric_entry = ttk.Entry(main_frame, widht=40)
+            fabric_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(main_frame, text="Código Peça").grid(row=4, column=0, sticky=tk.W, pady=5)
+            cod_pec_entry = ttk.Entry(main_frame, widht=40)
+            cod_pec_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(main_frame, text="Preço custo").grid(row=5, column=0, sticky=tk.W, pady=5)
+            vlr_cust_entry = ttk.Entry(main_frame, widht=40)
+            vlr_cust_entry.grid(row=5, column=1, pady=5, padx=(10, 0))
+
+            ttk.Label(main_frame, text="Valor venda").grid(row=5, column=2, sticky=tk.W, pady=5)
+            vlr_venda_entry = ttk.Entry(main_frame, widht=40)
+            vlr_venda_entry.grid(row=5, column=3, pady=5, padx=(10, 0))
+
+            # Frame para botões
+            btn_frame = ttk.Frame(main_frame)
+            btn_frame.grid(row=4, column=0, columnspan=2, pady=20)
+            
+            # Botão Salvar
+            ttk.Button(btn_frame, text="Salvar", command=lambda: self.salvar_peca(
+                cod_nf_entry.get(), cod_in_entry.get(), descr_entry.get(), fabric_entry.get(), cod_pec_entry.get(), vlr_cust_entry.get(), vlr_venda_entry.get(), self.novo_cli_wnd
+            )).pack(side=tk.LEFT, padx=5)
+            
+            # Botão Cancelar
+            ttk.Button(btn_frame, text="Cancelar", command=self.novo_cli_wnd.destroy).pack(side=tk.LEFT, padx=5)
+
+        # Salvar peças
+        def salvar_veiculo(self, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda):
+            if not cod_in:
+                messagebox.showerror("Erro", 'O campo "Código interno" é obrigatório!')
+                return
+            
+            try:
+                conn = sqlite3.connect('platypus.db')
+                cursor = conn.cursor()
+                
+                # Criar tabela se não existir
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS clientes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        cod_nf TEXT,
+                        cod_in TEXT NOT NULL,
+                        descr TEXT,
+                        fabric TEXT,
+                        cod_pec TEXT,
+                        vlr_cust TEXT,
+                        vlr_venda TEXT
+                        data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Inserir cliente
+                cursor.execute(
+                    "INSERT INTO clientes (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda)
+                )
+                
+                conn.commit()
+                conn.close()
+                
+                messagebox.showinfo("Sucesso", "Peça cadastrado com sucesso!")
+                self.novo_cli_wnd.destroy()
+                
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao salvar peça: {str(e)}")
+
         #Barra menu cabeçalho
         menubar = tk.Menu(self.root)
 
