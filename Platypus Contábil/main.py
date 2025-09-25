@@ -26,6 +26,7 @@ class Main:
 
         self.criar_widgets()
         self.criar_tabela_clientes()
+        self.criar_tabela_pecas()
 
     def criar_tabela_clientes(self):
         try:
@@ -48,6 +49,25 @@ class Main:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
 
+    def criar_tabela_pecas(self):
+        try:
+            self.c.execute('''
+                CREATE TABLE IF NOT EXISTS pecas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cod_nf TEXT,
+                    cod_in TEXT NOT NULL,
+                    descr TEXT,
+                    fabric TEXT,
+                    cod_pec TEXT,
+                    vlr_cust TEXT,
+                    vlr_venda TEXT
+                    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            self.conn.commit()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
+
     def pesquisar_clientes(self, event=None):
         """Pesquisa clientes conforme texto digitado"""
         filtro = self.entry_pesquisa_cliente.get()
@@ -57,6 +77,11 @@ class Main:
         """Pesquisa veiculos conforme texto digitado"""
         filtro = self.entry_pesquisa_veiculo.get()
         self.carregar_lista_veiculos(filtro)
+
+    def pesquisar_peca(self, event=None):
+        """Pesquisa veiculos conforme texto digitado"""
+        filtro = self.entry_pesquisa_peca.get()
+        self.carregar_lista_peca(filtro)
 
     def carregar_lista_veiculos(self, filtro=None):
 
@@ -97,6 +122,30 @@ class Main:
         else:
             self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
                                 FROM clientes 
+                                ORDER BY nome''')
+            
+        cliente = self.c.fetchall()
+            
+        # Adiciona os clientes na treeview
+        for cliente in cliente:
+            self.tree_clientes.insert('', tk.END, values=cliente)
+
+    #Carregar Lista
+    def carregar_lista_peca(self, filtro=None):
+
+        # Limpa a treeview
+        for item in self.tree_pecas.get_children():
+            self.tree_peca.delete(item)
+            
+        # Consulta os clientes no banco de dados
+        if filtro:
+            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
+                                FROM pecas 
+                                WHERE nome LIKE ? OR cnpj LIKE ? 
+                                ORDER BY nome''', (f'%{filtro}%', f'%{filtro}%'))
+        else:
+            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
+                                FROM pecas 
                                 ORDER BY nome''')
             
         cliente = self.c.fetchall()
@@ -338,7 +387,7 @@ class Main:
         # Botão Cancelar
         ttk.Button(btn_frame, text="Cancelar", command=self.novo_veiculo_wnd.destroy).pack(side=tk.LEFT, padx=5)
 
-        # Salvar veiculos
+    # Salvar veiculos
     def salvar_veiculo(self, resp_veiculo, placa, km, ano, modelo):
         if not resp_veiculo:
             messagebox.showerror("Erro", 'O campo "responsável" é obrigatório!')
@@ -380,7 +429,7 @@ class Main:
 
         self.rel_veic_wnd = tk.Toplevel(self.root)
         self.rel_veic_wnd.title("Relátório Veículos")
-        self.rel_veic_wnd.geometry("500x400")
+        self.rel_veic_wnd.geometry("1200x500")
         self.rel_veic_wnd.resizable(False, False)
 
         self.rel_veic_wnd.transient(self.root)
@@ -442,6 +491,170 @@ class Main:
         # Carrega a lista de veículos
         self.carregar_lista_veiculos()
 
+    def nova_peca(self):
+
+        self.nova_peca_wnd = tk.Toplevel(self.root)
+        self.nova_peca_wnd.title("Cadastrar peça")
+        self.nova_peca_wnd.geometry("500x400")
+        self.nova_peca_wnd.resizable(False, False)
+
+        self.nova_peca_wnd.transient(self.root)
+        self.nova_peca_wnd.grab_set()
+
+        # Frame principal
+        main_frame = ttk.Frame(self.nova_peca_wnd, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(main_frame, text="Código NF").grid(row=0, column=0, sticky=tk.W, pady=5)
+        cod_nf_entry = ttk.Entry(main_frame, width=40)
+        cod_nf_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(main_frame, text="Código interno").grid(row=1, column=0, sticky=tk.W, pady=5)
+        cod_in_entry = ttk.Entry(main_frame, width=40)
+        cod_in_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(main_frame, text="Descrição").grid(row=2, column=0, sticky=tk.W, pady=5)
+        descr_entry = ttk.Entry(main_frame, width=40)
+        descr_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(main_frame, text="Fabricante").grid(row=3, column=0, sticky=tk.W, pady=5)
+        fabric_entry = ttk.Entry(main_frame, width=40)
+        fabric_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(main_frame, text="Código Peça").grid(row=4, column=0, sticky=tk.W, pady=5)
+        cod_pec_entry = ttk.Entry(main_frame, width=40)
+        cod_pec_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(main_frame, text="Preço custo").grid(row=5, column=0, sticky=tk.W, pady=5)
+        vlr_cust_entry = ttk.Entry(main_frame, width=40)
+        vlr_cust_entry.grid(row=5, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(main_frame, text="Valor venda").grid(row=5, column=0, sticky=tk.W, pady=5)
+        vlr_venda_entry = ttk.Entry(main_frame, width=40)
+        vlr_venda_entry.grid(row=6, column=1, pady=5, padx=(10, 0))
+
+        # Frame para botões
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.grid(row=7, column=0, columnspan=2, pady=20)
+           
+        # Botão Salvar
+        ttk.Button(btn_frame, text="Salvar", command=lambda: self.salvar_peca(
+            cod_nf_entry.get(), cod_in_entry.get(), descr_entry.get(), fabric_entry.get(), cod_pec_entry.get(), vlr_cust_entry.get(), vlr_venda_entry.get(), self.novo_cli_wnd
+        )).pack(side=tk.LEFT, padx=5)
+            
+        # Botão Cancelar
+        ttk.Button(btn_frame, text="Cancelar", command=self.nova_peca_wnd.destroy).pack(side=tk.LEFT, padx=5)
+
+        # Salvar peças
+    def salvar_veiculo(self, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda):
+        if not cod_in:
+            messagebox.showerror("Erro", 'O campo "Código interno" é obrigatório!')
+            return
+            
+        try:
+            conn = sqlite3.connect('platypus.db')
+            cursor = conn.cursor()
+                
+            # Criar tabela se não existir
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS pecas (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cod_nf TEXT,
+                    cod_in TEXT NOT NULL,
+                    descr TEXT,
+                    fabric TEXT,
+                    cod_pec TEXT,
+                    vlr_cust TEXT,
+                    vlr_venda TEXT
+                    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+                
+            # Inserir cliente
+            cursor.execute(
+                "INSERT INTO clientes (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda)
+            )
+                
+            conn.commit()
+            conn.close()
+                
+            messagebox.showinfo("Sucesso", "Peça cadastrado com sucesso!")
+            self.novo_cli_wnd.destroy()
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar peça: {str(e)}")
+
+    def estoque(self):
+
+        self.estoque_wnd = tk.Toplevel(self.root)
+        self.estoque_wnd.title("Estoque")
+        self.estoque_wnd.geometry("1200x500")
+        self.estoque_wnd.resizable(False, False)
+
+        self.estoque_wnd.transient(self.root)
+        self.estoque_wnd.grab_set()
+
+        # Frame principal
+        main_frame = ttk.Frame(self.estoque_wnd, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de pesquisa
+        frame_pesq_peca = ttk.Frame(main_frame)
+        frame_pesq_peca.pack(fill=tk.X, pady=5)
+            
+        ttk.Label(frame_pesq_peca, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_peca = ttk.Entry(frame_pesq_peca, width=30)
+        self.entry_pesquisa_peca.pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_peca.bind("<KeyRelease>", self.pesquisar_veiculo)
+            
+        ttk.Button(frame_pesq_peca, text="Nova Peça", 
+            command=self.nova_peca).pack(side=tk.RIGHT, padx=5)
+            
+        # Treeview para listar veiculos
+        columns = ('id','cod_nf', 'cod_in', 'descr', 'fabric', 'cod_pec', 'vlr_cust', 'vlr_venda')
+        self.tree_pecas = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
+            
+        # Cabeçalhos
+        self.tree_pecas.heading('id', text='ID')
+        self.tree_pecas.heading('cod_nf', text='Código NF')
+        self.tree_pecas.heading('cod_in', text='Código interno')
+        self.tree_pecas.heading('descr', text='Descrição')
+        self.tree_pecas.heading('fabric', text='Fabricante')
+        self.tree_pecas.heading('cod_pec', text='Código OEM')
+        self.tree_pecas.heading('vlr_cust', text='Valor custo')
+        self.tree_pecas.heading('vlr_venda', text='Valor venda')
+            
+        # Largura das colunas
+        self.tree_pecas.column('id', width=50, anchor=tk.CENTER)
+        self.tree_pecas.column('cod_nf', width=80, anchor=tk.W)
+        self.tree_pecas.column('cod_in', width=80, anchor=tk.W)
+        self.tree_pecas.column('descr', width=150, anchor=tk.W)
+        self.tree_pecas.column('fabric', width=90, anchor=tk.W)
+        self.tree_pecas.column('cod_pec', width=150, anchor=tk.W)
+        self.tree_pecas.column('vlr_cust', width=80, anchor=tk.W)
+        self.tree_pecas.column('vlr_venda', width=80, anchor=tk.W)
+            
+        self.tree_pecas.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de rolagem
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_pecas.yview)
+        self.tree_pecas.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+        # Botões de ação
+        frame_botoes = ttk.Frame(main_frame)
+        frame_botoes.pack(fill=tk.X, pady=10)
+            
+        #ttk.Button(frame_botoes, text="Editar", 
+        #    command=self.editar_veiculo).pack(side=tk.LEFT, padx=5)
+            
+        #ttk.Button(frame_botoes, text="Excluir", 
+        #    command=self.excluir_veiculo).pack(side=tk.LEFT, padx=5)
+            
+        # Carrega a lista de veículos
+        self.carregar_lista_peca()
+
     def criar_widgets(self):
         # Frame principal que contém o canvas e a scrollbar
         main_frame = ttk.Frame(self.root)
@@ -480,6 +693,14 @@ class Main:
         menu_veiculos.add_command(label="Veículos", command=self.rel_veiculos)
 
         menubar.add_cascade(label="Veículos", menu=menu_veiculos)
+
+        #Peças
+        menu_pecas = tk.Menu(menubar, tearoff=0)
+        menu_pecas.add_command(label="Cadastrar Peça", command=self.nova_peca)
+        menu_pecas.add_command(label="Estoque", command=self.estoque)
+        #menu_pecas.add_command(label="Histórico", command=self.hist_pecas)
+
+        menubar.add_cascade(label="Peças", menu=menu_pecas)
 
 if __name__ == "__main__":
     root = tk.Tk()
