@@ -40,6 +40,7 @@ class Main:
                     email TEXT,
                     responsavel TEXT,
                     cpf_responsavel TEXT,
+                    dt_nascimento TEXT,
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -56,12 +57,12 @@ class Main:
             
         # Consulta os clientes no banco de dados
         if filtro:
-            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel 
+            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
                                 FROM clientes 
                                 WHERE nome LIKE ? OR cnpj LIKE ? 
                                 ORDER BY nome''', (f'%{filtro}%', f'%{filtro}%'))
         else:
-            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel 
+            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
                                 FROM clientes 
                                 ORDER BY nome''')
             
@@ -122,13 +123,17 @@ class Main:
         cpfresp_entry = ttk.Entry(frame, width=40)
         cpfresp_entry.grid(row=4, column=3, pady=5, padx=(10, 0))
 
+        ttk.Label(frame, text="Data de Nascimento").grid(row=5, column=0, sticky=tk.E, pady=5)
+        dtnascimento_entry = ttk.Entry(frame, width=40)
+        dtnascimento_entry.grid(row=5, column=1, pady=5, padx=(10, 0))
+
         # Frame para botões
         btn_frame = ttk.Frame(frame)
-        btn_frame.grid(row=5, column=0, columnspan=2, pady=20)
+        btn_frame.grid(row=6, column=0, columnspan=2, pady=20)
             
         # Botão Salvar
         ttk.Button(btn_frame, text="Salvar", command=lambda: self.salvar_cliente(
-            cnpj_entry.get(), nome_entry.get(), endereco_entry.get(), cidade_entry.get(), telefone_entry.get(), email_entry.get(), resp_entry.get(), cpfresp_entry.get()
+            cnpj_entry.get(), nome_entry.get(), endereco_entry.get(), cidade_entry.get(), telefone_entry.get(), email_entry.get(), resp_entry.get(), cpfresp_entry.get(), dtnascimento_entry.get()
         )).pack(side=tk.LEFT, padx=5)
             
         # Botão Cancelar
@@ -138,7 +143,7 @@ class Main:
         cnpj_entry.focus_set()
 
     # Salvar clientes
-    def salvar_cliente(self, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel):
+    def salvar_cliente(self, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento):
         if not nome:
             messagebox.showerror("Erro", "O campo nome é obrigatório!")
             return
@@ -159,14 +164,15 @@ class Main:
                         email TEXT,
                         responsavel TEXT,
                         cpf_responsavel TEXT,
+                        dt_nascimento TEXT,
                         data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
             ''')
                 
             # Inserir cliente
             cursor.execute(
-                "INSERT INTO clientes (cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel)
+                "INSERT INTO clientes (cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento)
             )
                 
             conn.commit()
@@ -205,7 +211,7 @@ class Main:
                 command=self.novo_cliente).pack(side=tk.RIGHT, padx=5)
             
         # Treeview para listar clientes
-        columns = ('id', 'cnpj', 'nome', 'endereco', 'cidade', 'telefone', 'email', 'responsavel', 'cpf_responsavel')
+        columns = ('id', 'cnpj', 'nome', 'endereco', 'cidade', 'telefone', 'email', 'responsavel', 'cpf_responsavel, dt_nascimento')
         self.tree_clientes = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
             
         # Cabeçalhos
@@ -218,6 +224,7 @@ class Main:
         self.tree_clientes.heading('email', text='Email')
         self.tree_clientes.heading('responsavel', text='Responsável')
         self.tree_clientes.heading('cpf_responsavel', text='CPF Responsável')
+        self.tree_clientes.heading('dt_nascimento', text='Data de Nascimento')
             
         # Largura das colunas
         self.tree_clientes.column('id', width=50, anchor=tk.CENTER)
@@ -229,6 +236,7 @@ class Main:
         self.tree_clientes.column('email', width=100, anchor=tk.W)
         self.tree_clientes.column('responsavel', width=100, anchor=tk.W)
         self.tree_clientes.column('cpf_responsavel', width=120, anchor=tk.W)
+        self.tree_clientes.column('dt_nascimento', width=100, anchor=tk.W)
             
         self.tree_clientes.pack(fill=tk.BOTH, expand=True)
             
