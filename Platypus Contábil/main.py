@@ -48,6 +48,39 @@ class Main:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
 
+    def pesquisar_clientes(self, event=None):
+        """Pesquisa clientes conforme texto digitado"""
+        filtro = self.entry_pesquisa_cliente.get()
+        self.carregar_lista_clientes(filtro)
+
+    def pesquisar_veiculo(self, event=None):
+        """Pesquisa veiculos conforme texto digitado"""
+        filtro = self.entry_pesquisa_veiculo.get()
+        self.carregar_lista_veiculos(filtro)
+
+    def carregar_lista_veiculos(self, filtro=None):
+
+        # Limpa a treeview
+        for item in self.tree_veiculos.get_children():
+            self.tree_veiculos.delete(item)
+            
+        # Consulta os veiculos no banco de dados
+        if filtro:
+            self.c.execute('''SELECT id, resp_veiculo, placa, km, ano, modelo 
+                            FROM veiculos 
+                            WHERE resp_veiculo LIKE ? OR placa LIKE ? 
+                            ORDER BY resp_veiculo''', (f'%{filtro}%', f'%{filtro}%'))
+        else:
+            self.c.execute('''SELECT id, resp_veiculo, placa, km, ano, modelo 
+                            FROM veiculos 
+                            ORDER BY resp_veiculo''')
+            
+        veiculo = self.c.fetchall()
+            
+        # Adiciona os veiculos na treeview
+        for veiculo in veiculo:
+            self.tree_veiculos.insert('', tk.END, values=veiculo)
+
     #Carregar Lista
     def carregar_lista_clientes(self, filtro=None):
 
@@ -66,16 +99,16 @@ class Main:
                                 FROM clientes 
                                 ORDER BY nome''')
             
-        clientes = self.c.fetchall()
+        cliente = self.c.fetchall()
             
         # Adiciona os clientes na treeview
-        for cliente in clientes:
+        for cliente in cliente:
             self.tree_clientes.insert('', tk.END, values=cliente)
 
-    def pesquisar_clientes(self, event=None):
+    def pesquisar_veiculos(self, event=None):
         """Pesquisa clientes conforme texto digitado"""
-        filtro = self.entry_pesquisa_cliente.get()
-        self.carregar_lista_clientes(filtro)
+        filtro = self.entry_pesquisa_veiculo.get()
+        self.carregar_lista_veiculos(filtro)
 
     #Novo Cliente
     def novo_cliente(self):
@@ -211,7 +244,7 @@ class Main:
                 command=self.novo_cliente).pack(side=tk.RIGHT, padx=5)
             
         # Treeview para listar clientes
-        columns = ('id', 'cnpj', 'nome', 'endereco', 'cidade', 'telefone', 'email', 'responsavel', 'cpf_responsavel, dt_nascimento')
+        columns = ('id', 'cnpj', 'nome', 'endereco', 'cidade', 'telefone', 'email', 'responsavel', 'cpf_responsavel', 'dt_nascimento')
         self.tree_clientes = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
             
         # Cabeçalhos
@@ -258,6 +291,157 @@ class Main:
         # Carrega a lista de clientes
         self.carregar_lista_clientes()
 
+    def novo_veiculo(self):
+
+        self.novo_veiculo_wnd = tk.Toplevel(self.root)
+        self.novo_veiculo_wnd.title("Cadastrar Veículo")
+        self.novo_veiculo_wnd.geometry("500x400")
+        self.novo_veiculo_wnd.resizable(False, False)
+
+        self.novo_veiculo_wnd.transient(self.root)
+        self.novo_veiculo_wnd.grab_set()
+
+        frame = ttk.Frame(self.novo_veiculo_wnd, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frame, text="Responsável").grid(row=0, column=0, sticky=tk.W, pady=5)
+        resp_entry = ttk.Entry(frame, width=40)
+        resp_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+
+        #ttk.Button(frame, text="Buscar", command=self.busc_resp).grid(row=0, column=1, sticky=tk.E, pady=5)
+
+        ttk.Label(frame, text="Placa").grid(row=1, column=0, sticky=tk.W, pady=5)
+        placa_entry = ttk.Entry(frame, width=40)
+        placa_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="KM").grid(row=2, column=0, sticky=tk.W, pady=5)
+        km_entry = ttk.Entry(frame, width=40)
+        km_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Ano").grid(row=3, column=0, sticky=tk.W, pady=5)
+        ano_entry = ttk.Entry(frame, width=40)
+        ano_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Modelo").grid(row=4, column=0, sticky=tk.W, pady=5)
+        modelo_entry = ttk.Entry(frame, width=40)
+        modelo_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
+
+        # Frame para botões
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=5, column=0, columnspan=2, pady=20)
+            
+        # Botão Salvar
+        ttk.Button(btn_frame, text="Salvar", command=lambda: self.salvar_veiculo(
+            resp_entry.get(), placa_entry.get(), km_entry.get(), ano_entry.get(), modelo_entry.get()
+        )).pack(side=tk.LEFT, padx=5)
+            
+        # Botão Cancelar
+        ttk.Button(btn_frame, text="Cancelar", command=self.novo_veiculo_wnd.destroy).pack(side=tk.LEFT, padx=5)
+
+        # Salvar veiculos
+    def salvar_veiculo(self, resp_veiculo, placa, km, ano, modelo):
+        if not resp_veiculo:
+            messagebox.showerror("Erro", 'O campo "responsável" é obrigatório!')
+            return
+            
+        try:
+            conn = sqlite3.connect('platycon.db')
+            cursor = conn.cursor()
+                
+            # Criar tabela se não existir
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS veiculos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    resp_veiculo TEXT NOT NULL,
+                    placa TEXT NOT NULL,
+                    km TEXT,
+                    ano TEXT,
+                    modelo TEXT
+                    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+                
+            # Inserir veiculo
+            cursor.execute(
+                "INSERT INTO veiculos (resp_veiculo, placa, km, ano, modelo) VALUES (?, ?, ?, ?, ?)",
+                (resp_veiculo, placa, km, ano, modelo)
+            )
+                
+            conn.commit()
+            conn.close()
+                
+            messagebox.showinfo("Sucesso", "Veículo cadastrado com sucesso!")
+            self.novo_veiculo_wnd.destroy()
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar veículo: {str(e)}")
+
+    def rel_veiculos(self):
+
+        self.rel_veic_wnd = tk.Toplevel(self.root)
+        self.rel_veic_wnd.title("Relátório Veículos")
+        self.rel_veic_wnd.geometry("500x400")
+        self.rel_veic_wnd.resizable(False, False)
+
+        self.rel_veic_wnd.transient(self.root)
+        self.rel_veic_wnd.grab_set()
+
+        # Frame principal
+        main_frame = ttk.Frame(self.rel_veic_wnd, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de pesquisa
+        frame_pesq_vei = ttk.Frame(main_frame)
+        frame_pesq_vei.pack(fill=tk.X, pady=5)
+            
+        ttk.Label(frame_pesq_vei, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_veiculo = ttk.Entry(frame_pesq_vei, width=30)
+        self.entry_pesquisa_veiculo.pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_veiculo.bind("<KeyRelease>", self.pesquisar_veiculo)
+            
+        ttk.Button(frame_pesq_vei, text="Novo Veículo", 
+            command=self.novo_veiculo).pack(side=tk.RIGHT, padx=5)
+            
+        # Treeview para listar veiculos
+        columns = ('id', 'resp_veiculo', 'placa', 'km', 'ano', 'modelo')
+        self.tree_veiculos = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
+            
+        # Cabeçalhos
+        self.tree_veiculos.heading('id', text='ID')
+        self.tree_veiculos.heading('resp_veiculo', text='Responsável')
+        self.tree_veiculos.heading('placa', text='Placa')
+        self.tree_veiculos.heading('km', text='KM')
+        self.tree_veiculos.heading('ano', text='Ano')
+        self.tree_veiculos.heading('modelo', text='Modelo')
+            
+        # Largura das colunas
+        self.tree_veiculos.column('id', width=50, anchor=tk.CENTER)
+        self.tree_veiculos.column('resp_veiculo', width=120, anchor=tk.W)
+        self.tree_veiculos.column('placa', width=80, anchor=tk.W)
+        self.tree_veiculos.column('km', width=80, anchor=tk.W)
+        self.tree_veiculos.column('ano', width=80, anchor=tk.W)
+        self.tree_veiculos.column('modelo', width=150, anchor=tk.W)
+            
+        self.tree_veiculos.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de rolagem
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_veiculos.yview)
+        self.tree_veiculos.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+        # Botões de ação
+        frame_botoes = ttk.Frame(main_frame)
+        frame_botoes.pack(fill=tk.X, pady=10)
+            
+        #ttk.Button(frame_botoes, text="Editar", 
+        #    command=self.editar_veiculo).pack(side=tk.LEFT, padx=5)
+            
+        #ttk.Button(frame_botoes, text="Excluir", 
+        #    command=self.excluir_veiculo).pack(side=tk.LEFT, padx=5)
+            
+        # Carrega a lista de veículos
+        self.carregar_lista_veiculos()
+
     def criar_widgets(self):
         # Frame principal que contém o canvas e a scrollbar
         main_frame = ttk.Frame(self.root)
@@ -289,6 +473,13 @@ class Main:
         menubar.add_cascade(label="Clientes", menu=menu_clientes)
 
         self.root.config(menu=menubar)
+
+        #Veículos
+        menu_veiculos = tk.Menu(menubar, tearoff=0)
+        menu_veiculos.add_command(label="Novo Veículo", command=self.novo_veiculo)
+        menu_veiculos.add_command(label="Veículos", command=self.rel_veiculos)
+
+        menubar.add_cascade(label="Veículos", menu=menu_veiculos)
 
 if __name__ == "__main__":
     root = tk.Tk()
