@@ -26,6 +26,7 @@ class Main:
 
         self.criar_widgets()
         self.criar_tabela_clientes()
+        self.criar_tabela_veiculos()
         self.criar_tabela_pecas()
 
     def criar_tabela_clientes(self):
@@ -42,6 +43,23 @@ class Main:
                     responsavel TEXT,
                     cpf_responsavel TEXT,
                     dt_nascimento TEXT,
+                    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            self.conn.commit()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
+
+    def criar_tabela_veiculos(self):
+        try:
+            self.c.execute('''
+                CREATE TABLE IF NOT EXISTS veiculos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    resp_veiculo TEXT NOT NULL,
+                    placa TEXT NOT NULL,
+                    km TEXT,
+                    ano TEXT,
+                    modelo TEXT
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -139,25 +157,20 @@ class Main:
             
         # Consulta os clientes no banco de dados
         if filtro:
-            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
+            self.c.execute('''SELECT id, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda 
                                 FROM pecas 
-                                WHERE nome LIKE ? OR cnpj LIKE ? 
-                                ORDER BY nome''', (f'%{filtro}%', f'%{filtro}%'))
+                                WHERE descr LIKE ? OR cod_pec LIKE ? 
+                                ORDER BY id''', (f'%{filtro}%', f'%{filtro}%'))
         else:
-            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
+            self.c.execute('''SELECT id, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda 
                                 FROM pecas 
-                                ORDER BY nome''')
+                                ORDER BY id''')
             
         cliente = self.c.fetchall()
             
         # Adiciona os clientes na treeview
         for cliente in cliente:
             self.tree_clientes.insert('', tk.END, values=cliente)
-
-    def pesquisar_veiculos(self, event=None):
-        """Pesquisa clientes conforme texto digitado"""
-        filtro = self.entry_pesquisa_veiculo.get()
-        self.carregar_lista_veiculos(filtro)
 
     #Novo Cliente
     def novo_cliente(self):
@@ -606,7 +619,7 @@ class Main:
         ttk.Label(frame_pesq_peca, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
         self.entry_pesquisa_peca = ttk.Entry(frame_pesq_peca, width=30)
         self.entry_pesquisa_peca.pack(side=tk.LEFT, padx=5)
-        self.entry_pesquisa_peca.bind("<KeyRelease>", self.pesquisar_veiculo)
+        self.entry_pesquisa_peca.bind("<KeyRelease>", self.pesquisar_peca)
             
         ttk.Button(frame_pesq_peca, text="Nova Peça", 
             command=self.nova_peca).pack(side=tk.RIGHT, padx=5)
