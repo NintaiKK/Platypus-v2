@@ -43,6 +43,19 @@ class Main:
         self.cliente_veiculo = tk.StringVar()
         self.cliente_placa = tk.StringVar()
         self.cliente_km = tk.StringVar()
+
+        self.valor_total = tk.DoubleVar(value=0.0)
+
+        self.criar_tabela_ordens_servico()
+
+        self.dados_empresa = {
+            "nome": "Viana & Viana Mecânica Diesel LTDA",
+            "endereço": "Rua Miguel Oresko n90",
+            "cidade": "Nova Santa Rita",
+            "cnpj": "61.459.722/0001-01",
+            "ie": "n lembro hehe",
+            "telefone": "51 9 9903-6427"
+        }
         
         # Variáveis para a ordem de serviço
         self.os_id = None
@@ -61,6 +74,39 @@ class Main:
     def gerar_numero_os(self):
         """Gera um número fictício de OS baseado na data/hora"""
         return datetime.now().strftime("%Y%m%d%H%M")
+    
+    def criar_tabela_ordens_servico(self):
+        try:
+            self.c.execute('''
+                CREATE TABLE IF NOT EXISTS ordens_servico (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    numero TEXT UNIQUE NOT NULL,
+                    cliente_id INTEGER,
+                    veiculo_id INTEGER,
+                    data_emissao TIMESTAMP,
+                    servico_solicitado TEXT,
+                    observacoes TEXT,
+                    valor_total REAL,
+                    status TEXT,
+                    data_fechamento TIMESTAMP,
+                    FOREIGN KEY (cliente_id) REFERENCES clientes (id),
+                    FOREIGN KEY (veiculo_id) REFERENCES veiculos (id)
+                )
+            ''')
+            self.c.execute('''
+                CREATE TABLE IF NOT EXISTS itens_os (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    os_id INTEGER,
+                    descricao TEXT,
+                    quantidade REAL,
+                    valor_unitario REAL,
+                    valor_total REAL,
+                    FOREIGN KEY (os_id) REFERENCES ordens_servico (id)
+                )
+            ''')
+            self.conn.commit()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar tabela OS: {str(e)}")
 
     def criar_tabela_clientes(self):
         try:
@@ -92,7 +138,7 @@ class Main:
                     placa TEXT NOT NULL,
                     km TEXT,
                     ano TEXT,
-                    modelo TEXT
+                    modelo TEXT,
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -111,7 +157,7 @@ class Main:
                     fabric TEXT,
                     cod_pec TEXT,
                     vlr_cust TEXT,
-                    vlr_venda TEXT
+                    vlr_venda TEXT,
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -800,12 +846,23 @@ class Main:
         """Seleciona o cliente da lista para a ordem de serviço"""
         selected_item = self.tree_veiculos.selection()
         if not selected_item:
-            messagebox.showwarning("Atenção", "Selecione um cliente!")
+            messagebox.showwarning("Atenção", "Selecione um veículo!")
             return
         
-        cliente_id = self.tree_veiculos.item(selected_item)['values'][0]
-        self.carregar_dados_cliente(cliente_id)
+        veiculo_id = self.tree_veiculos.item(selected_item)['values'][0]
+        self.carregar_dados_veiculo(veiculo_id)
         window.destroy()
+    
+    def carregar_dados_veiculo(self, veiculo_id):
+        """Carrega os dados do cliente nos campos do formulário"""
+        self.c.execute("SELECT * FROM veiculos WHERE id=?", (veiculo_id,))
+        veiculo = self.c.fetchone()
+        
+        if veiculo:
+            self.veiculo_id_id = veiculo[0]
+            self.cliente_veiculo.set(veiculo[5])
+            self.cliente_placa.set(veiculo[2])
+            self.cliente_km.set(veiculo[3])
     
     def carregar_dados_cliente(self, cliente_id):
         """Carrega os dados do cliente nos campos do formulário"""
@@ -831,77 +888,10 @@ class Main:
         cliente_id = self.tree_clientes.item(selected_item)['values'][0]
         self.carregar_dados_cliente(cliente_id)
 
-    #remover
-    def abrir_gerenciador_clientes(self):
-        """Abre a janela de gerenciamento de clientes"""
-        clientes_window = tk.Toplevel(self.root)
-        clientes_window.title("Gerenciador de Clientes")
-        clientes_window.geometry("800x600")
-        
-        # Frame principal
-        main_frame = ttk.Frame(clientes_window, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Barra de pesquisa
-        frame_pesquisa = ttk.Frame(main_frame)
-        frame_pesquisa.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(frame_pesquisa, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
-        self.entry_pesquisa_cliente = ttk.Entry(frame_pesquisa, width=30)
-        self.entry_pesquisa_cliente.pack(side=tk.LEFT, padx=5)
-        self.entry_pesquisa_cliente.bind("<KeyRelease>", self.pesquisar_clientes)
-        
-        ttk.Button(frame_pesquisa, text="Novo Cliente", 
-                  command=self.novo_cliente).pack(side=tk.RIGHT, padx=5)
-        
-        # Treeview para listar clientes
-        columns = ('id', 'nome', 'telefone', 'cpf_cnpj', 'cidade')
-        self.tree_clientes = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
-        
-        # Definindo cabeçalhos
-        self.tree_clientes.heading('id', text='ID')
-        self.tree_clientes.heading('nome', text='Nome/Razão Social')
-        self.tree_clientes.heading('telefone', text='Telefone')
-        self.tree_clientes.heading('cpf_cnpj', text='CPF/CNPJ')
-        self.tree_clientes.heading('cidade', text='Cidade/UF')
-        
-        # Definindo largura das colunas
-        self.tree_clientes.column('id', width=50, anchor=tk.CENTER)
-        self.tree_clientes.column('nome', width=250, anchor=tk.W)
-        self.tree_clientes.column('telefone', width=100, anchor=tk.W)
-        self.tree_clientes.column('cpf_cnpj', width=120, anchor=tk.W)
-        self.tree_clientes.column('cidade', width=150, anchor=tk.W)
-        
-        self.tree_clientes.pack(fill=tk.BOTH, expand=True)
-        
-        # Barra de rolagem
-        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_clientes.yview)
-        self.tree_clientes.configure(yscroll=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Botões de ação
-        frame_botoes = ttk.Frame(main_frame)
-        frame_botoes.pack(fill=tk.X, pady=10)
-        
-        ttk.Button(frame_botoes, text="Selecionar", 
-                  command=lambda: self.selecionar_cliente_na_lista(clientes_window)).pack(side=tk.LEFT, padx=5)
-        
-        ttk.Button(frame_botoes, text="Editar", 
-                  command=self.editar_cliente).pack(side=tk.LEFT, padx=5)
-        
-        ttk.Button(frame_botoes, text="Excluir", 
-                  command=self.excluir_cliente).pack(side=tk.LEFT, padx=5)
-        
-        ttk.Button(frame_botoes, text="Fechar", 
-                  command=clientes_window.destroy).pack(side=tk.RIGHT, padx=5)
-        
-        # Carrega a lista de clientes
-        self.carregar_lista_clientes()
-
     def abrir_gerenciador_clientes(self):
         """Abre a janela de gerenciamento de clientes"""
         veiculos_window = tk.Toplevel(self.root)
-        veiculos_window.title("Gerenciador de Veículoss")
+        veiculos_window.title("Gerenciador de Clientes")
         veiculos_window.geometry("800x600")
         
         # Frame principal
@@ -1024,7 +1014,7 @@ class Main:
 
         # Limpa a treeview
         for item in self.tree_pecas.get_children():
-            self.tree_peca.delete(item)
+            self.tree_pecas.delete(item)
             
         # Consulta os clientes no banco de dados
         if filtro:
@@ -1037,11 +1027,11 @@ class Main:
                                 FROM pecas 
                                 ORDER BY id''')
             
-        cliente = self.c.fetchall()
+        pecas = self.c.fetchall()
             
         # Adiciona os clientes na treeview
-        for cliente in cliente:
-            self.tree_clientes.insert('', tk.END, values=cliente)
+        for peca in pecas:
+            self.tree_pecas.insert('', tk.END, values=peca)
 
     #Novo Cliente
     def novo_cliente(self):
@@ -1295,7 +1285,7 @@ class Main:
                     placa TEXT NOT NULL,
                     km TEXT,
                     ano TEXT,
-                    modelo TEXT
+                    modelo TEXT,
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -1373,7 +1363,7 @@ class Main:
         frame_botoes.pack(fill=tk.X, pady=10)
         
         ttk.Button(frame_botoes, text="Selecionar", 
-                  command=lambda: self.selecionar_cliente_na_lista(self.rel_veic_wnd)).pack(side=tk.LEFT, padx=5)
+                  command=lambda: self.selecionar_veiculo_na_lista(self.rel_veic_wnd)).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(frame_botoes, text="Editar", 
                   command=self.editar_cliente).pack(side=tk.LEFT, padx=5)
@@ -1442,13 +1432,13 @@ class Main:
         ttk.Button(btn_frame, text="Cancelar", command=self.nova_peca_wnd.destroy).pack(side=tk.LEFT, padx=5)
 
         # Salvar peças
-    def salvar_veiculo(self, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda):
+    def salvar_peca(self, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda):
         if not cod_in:
             messagebox.showerror("Erro", 'O campo "Código interno" é obrigatório!')
             return
             
         try:
-            conn = sqlite3.connect('platypus.db')
+            conn = sqlite3.connect('platycon.db')
             cursor = conn.cursor()
                 
             # Criar tabela se não existir
@@ -1461,14 +1451,14 @@ class Main:
                     fabric TEXT,
                     cod_pec TEXT,
                     vlr_cust TEXT,
-                    vlr_venda TEXT
+                    vlr_venda TEXT,
                     data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
                 
             # Inserir cliente
             cursor.execute(
-                "INSERT INTO clientes (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO pecas (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda)
             )
                 
@@ -1476,7 +1466,7 @@ class Main:
             conn.close()
                 
             messagebox.showinfo("Sucesso", "Peça cadastrado com sucesso!")
-            self.novo_cli_wnd.destroy()
+            self.nova_peca_wnd.destroy()
                 
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar peça: {str(e)}")
@@ -1675,7 +1665,6 @@ class Main:
         frame_totais = ttk.Frame(main_frame)
         frame_totais.pack(fill=tk.X, pady=5)
 
-        self.valor_total = tk.DoubleVar(value=0.0)
         ttk.Label(frame_totais, text="Valor Total:", style='Total.TLabel').pack(side=tk.LEFT, padx=5)
         ttk.Label(frame_totais, textvariable=self.valor_total, style='Total.TLabel').pack(side=tk.LEFT)
 
