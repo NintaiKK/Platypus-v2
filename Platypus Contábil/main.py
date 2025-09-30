@@ -50,7 +50,7 @@ class Main:
 
         self.dados_empresa = {
             "nome": "Viana & Viana Mecânica Diesel LTDA",
-            "endereço": "Rua Miguel Oresko n90",
+            "endereco": "Rua Miguel Oresko n90",
             "cidade": "Nova Santa Rita",
             "cnpj": "61.459.722/0001-01",
             "ie": "n lembro hehe",
@@ -605,6 +605,9 @@ class Main:
         """Cria uma nova OS"""
         if not messagebox.askyesno("Confirmar", "Deseja criar uma nova OS? Todos os dados não salvos serão perdidos."):
             return
+        
+        if self.cliente_id:
+            self.preencher_campos_os_cliente()
             
         self.limpar_campos_os()
         self.numero_os.set(self.gerar_numero_os())
@@ -811,14 +814,11 @@ class Main:
             return
         
         try:
-            # Primeiro verifica se existem ordens de serviço para este cliente
-            self.c.execute("SELECT COUNT(*) FROM clientes WHERE cliente_id=?", (cliente_id,))
+            # Verifica se existem ordens de serviço para este cliente
+            self.c.execute("SELECT COUNT(*) FROM ordens_servico WHERE cliente_id=?", (cliente_id,))
             if self.c.fetchone()[0] > 0:
                 messagebox.showerror("Erro", "Este cliente possui ordens de serviço vinculadas e não pode ser excluído!")
                 return
-            
-            # Exclui os veículos do cliente primeiro
-            self.c.execute("DELETE FROM veiculos WHERE cliente_id=?", (cliente_id,))
             
             # Exclui o cliente
             self.c.execute("DELETE FROM clientes WHERE id=?", (cliente_id,))
@@ -838,9 +838,15 @@ class Main:
             messagebox.showwarning("Atenção", "Selecione um cliente!")
             return
         
+        # O ID está na primeira coluna (índice 0)
         cliente_id = self.tree_clientes.item(selected_item)['values'][0]
+        
+        # Carrega os dados do cliente selecionado
         self.carregar_dados_cliente(cliente_id)
-        window.destroy()
+        
+        # Fecha a janela de seleção
+        if window:
+            window.destroy()
 
     def selecionar_veiculo_na_lista(self, window):
         """Seleciona o cliente da lista para a ordem de serviço"""
@@ -859,7 +865,7 @@ class Main:
         veiculo = self.c.fetchone()
         
         if veiculo:
-            self.veiculo_id_id = veiculo[0]
+            self.veiculo_id = veiculo[0]
             self.cliente_veiculo.set(veiculo[5])
             self.cliente_placa.set(veiculo[2])
             self.cliente_km.set(veiculo[3])
@@ -878,6 +884,52 @@ class Main:
             self.cliente_telefone.set(cliente[5])
             self.cliente_email.set(cliente[6])
 
+    def abrir_editor_cliente(self, cliente_data):
+        editor = tk.Toplevel(self.root)
+        editor.title("Editar Cliente")
+        editor.geometry("600x500")
+
+    def editar_veiculo(self):
+        selected_item = self.tree_veiculos.selection()
+        if not selected_item:
+            messagebox.showwarning("Atenção", "Selecione um veículo para editar!")
+            return
+        
+        veiculo_id = self.tree_veiculos.item(selected_item)['values'][0]
+        
+        # Carrega dados do veículo
+        self.c.execute("SELECT * FROM veiculos WHERE id=?", (veiculo_id,))
+        veiculo_data = self.c.fetchone()
+        
+        if veiculo_data:
+            self.abrir_editor_veiculo(veiculo_data)
+
+    def abrir_editor_veiculo(self, veiculo_data):
+        """Abre janela para editar veículo existente"""
+        # Implementação similar ao novo_veiculo com dados pré-carregados
+        pass
+
+    def excluir_veiculo(self):
+        """Exclui o veículo selecionado na lista"""
+        selected_item = self.tree_veiculos.selection()
+        if not selected_item:
+            messagebox.showwarning("Atenção", "Selecione um veículo para excluir!")
+            return
+        
+        veiculo_id = self.tree_veiculos.item(selected_item)['values'][0]
+        
+        # Verifica se o veículo está em alguma OS
+        self.c.execute("SELECT COUNT(*) FROM ordens_servico WHERE veiculo_id=?", (veiculo_id,))
+        if self.c.fetchone()[0] > 0:
+            messagebox.showerror("Erro", "Este veículo está vinculado a ordens de serviço e não pode ser excluído!")
+            return
+        
+        if messagebox.askyesno("Confirmar", "Tem certeza que deseja excluir este veículo?"):
+            self.c.execute("DELETE FROM veiculos WHERE id=?", (veiculo_id,))
+            self.conn.commit()
+            self.carregar_lista_veiculos()
+            messagebox.showinfo("Sucesso", "Veículo excluído com sucesso!")
+
     def editar_cliente(self):
         """Edita o cliente selecionado na lista"""
         selected_item = self.tree_clientes.selection()
@@ -886,7 +938,14 @@ class Main:
             return
         
         cliente_id = self.tree_clientes.item(selected_item)['values'][0]
-        self.carregar_dados_cliente(cliente_id)
+        self.c.execute("SELECT * FROM clientes WHERE id=?", (cliente_id,))
+        cliente_data = self.c.fetchone()
+        
+        if cliente_data:
+            # Abre janela de edição com dados pré-carregados
+            self.abrir_editor_cliente(cliente_data)
+        else:
+            messagebox.showerror("Erro", "Cliente não encontrado!")
 
     def abrir_gerenciador_clientes(self):
         """Abre a janela de gerenciamento de clientes"""
@@ -956,6 +1015,11 @@ class Main:
 
     def selecionar_cliente(self):
         """Abre o gerenciador de clientes em modo de seleção"""
+        # Verifica se a janela de OS está aberta
+        if not hasattr(self, 'nova_os_wnd') or not self.nova_os_wnd.winfo_exists():
+            messagebox.showwarning("Atenção", "Abra uma OS primeiro para selecionar cliente!")
+            return
+        
         self.rel_clientes()
 
     def selecionar_veiculo(self):
@@ -987,7 +1051,7 @@ class Main:
 
     #Carregar Lista
     def carregar_lista_clientes(self, filtro=None):
-
+        """Carrega a lista de clientes na treeview"""
         # Limpa a treeview
         for item in self.tree_clientes.get_children():
             self.tree_clientes.delete(item)
@@ -995,18 +1059,19 @@ class Main:
         # Consulta os clientes no banco de dados
         if filtro:
             self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
-                                FROM clientes 
-                                WHERE nome LIKE ? OR cnpj LIKE ? 
-                                ORDER BY nome''', (f'%{filtro}%', f'%{filtro}%'))
+                            FROM clientes 
+                            WHERE nome LIKE ? OR cnpj LIKE ? 
+                            ORDER BY nome''', 
+                        (f'%{filtro}%', f'%{filtro}%'))
         else:
             self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
-                                FROM clientes 
-                                ORDER BY nome''')
+                            FROM clientes 
+                            ORDER BY nome''')
             
-        cliente = self.c.fetchall()
+        clientes = self.c.fetchall()
             
         # Adiciona os clientes na treeview
-        for cliente in cliente:
+        for cliente in clientes:
             self.tree_clientes.insert('', tk.END, values=cliente)
 
     #Carregar Lista
