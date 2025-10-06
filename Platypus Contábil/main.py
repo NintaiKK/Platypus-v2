@@ -1608,144 +1608,120 @@ class Main:
 
     #OS
     def nova_os(self):
-
-        self.nova_os_wnd = tk.Toplevel(self.root)
-        self.nova_os_wnd.title("Nova OS")
-        self.nova_os_wnd.geometry("500x800")
-
-        self.nova_os_wnd.transient(self.root)
-
-        # Frame principal
-        main_frame = ttk.Frame(self.nova_os_wnd, padding="10")
+        """Abre janela para nova ordem de serviço"""
+        self.os_window = tk.Toplevel(self.root)
+        self.os_window.title("Nova Ordem de Serviço")
+        self.os_window.geometry("900x700")
+        
+        # Variáveis da OS
+        self.numero_os = tk.StringVar(value=self.gerar_numero_os())
+        self.data_emissao = tk.StringVar(value=datetime.now().strftime("%d/%m/%Y %H:%M"))
+        self.cliente_nome = tk.StringVar()
+        self.cliente_veiculo = tk.StringVar()
+        self.servico_solicitado = tk.StringVar()
+        self.observacoes = tk.StringVar()
+        self.valor_total = tk.StringVar(value="R$ 0,00")
+        self.itens_os = []
+        
+        main_frame = ttk.Frame(self.os_window, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
-
-        # Frame principal
-        # Área do cliente
-        frame_cliente = ttk.LabelFrame(main_frame, text="Dados do Cliente/Veículo", padding="10")
-        frame_cliente.pack(fill=tk.X, pady=5)
-
-        # Configurar grid para o frame do cliente
-        frame_cliente.grid_columnconfigure(1, weight=1)
-        frame_cliente.grid_columnconfigure(3, weight=1)
-
-        ttk.Label(frame_cliente, text="Razão Social").grid(row=0, column=0, sticky=tk.W, pady=5)
-        raz_soci_os_entry = ttk.Entry(frame_cliente, width=40)
-        raz_soci_os_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="CNPJ").grid(row=0, column=2, sticky=tk.W, pady=5)
-        cnpj_os_entry = ttk.Entry(frame_cliente, width=40)
-        cnpj_os_entry.grid(row=0, column=3, pady=5, padx=(10, 0))
         
-        ttk.Button(frame_cliente, text="Selecionar Cliente", command=self.selecionar_cliente).grid(row=0, column=4, padx=5, pady=2)
-
-        ttk.Label(frame_cliente, text="Endereço").grid(row=1, column=0, sticky=tk.W, pady=5)
-        end_os_entry = ttk.Entry(frame_cliente, width=40)
-        end_os_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="Cidade/UF").grid(row=1, column=2, sticky=tk.W, pady=5)
-        cidade_os_entry = ttk.Entry(frame_cliente, width=40)
-        cidade_os_entry.grid(row=1, column=3, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="Telefone").grid(row=2, column=0, sticky=tk.W, pady=5)
-        cod_pec_entry = ttk.Entry(frame_cliente, width=40)
-        cod_pec_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="E-mail").grid(row=2, column=2, sticky=tk.W, pady=5)
-        email_os_entry = ttk.Entry(frame_cliente, width=40)
-        email_os_entry.grid(row=2, column=3, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="Placa").grid(row=3, column=0, sticky=tk.W, pady=5)
-        vlr_venda_entry = ttk.Entry(frame_cliente, width=40)
-        vlr_venda_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="KM").grid(row=3, column=2, sticky=tk.W, pady=5)
-        km_os_entry = ttk.Entry(frame_cliente, width=40)
-        km_os_entry.grid(row=3, column=3, pady=5, padx=(10, 0))
+        # Cabeçalho OS
+        header_frame = ttk.Frame(main_frame)
+        header_frame.pack(fill=tk.X, pady=5)
         
-        ttk.Button(frame_cliente, text="Selecionar veículo", command=self.selecionar_veiculo).grid(row=3, column=4, padx=5, pady=2)
-
-        ttk.Label(frame_cliente, text="Ano").grid(row=4, column=0, sticky=tk.W, pady=5)
-        ano_os_entry = ttk.Entry(frame_cliente, width=40)
-        ano_os_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="Modelo").grid(row=3, column=0, sticky=tk.W, pady=5)
-        modelo_os_entry = ttk.Entry(frame_cliente, width=40)
-        modelo_os_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="Responsável").grid(row=4, column=2, sticky=tk.W, pady=5)
-        resp_os_entry = ttk.Entry(frame_cliente, width=40)
-        resp_os_entry.grid(row=4, column=3, pady=5, padx=(10, 0))
-
-        ttk.Label(frame_cliente, text="CPF").grid(row=5, column=0, sticky=tk.W, pady=5)
-        cpf_resp_os_entry = ttk.Entry(frame_cliente, width=40)
-        cpf_resp_os_entry.grid(row=5, column=1, pady=5, padx=(10, 0))
+        ttk.Label(header_frame, text="OS Nº:").pack(side=tk.LEFT)
+        ttk.Label(header_frame, textvariable=self.numero_os, font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(frame_cliente, text="Salvar Cliente", command=self.salvar_cliente).grid(row=6, column=4, padx=5, pady=2)
-
+        ttk.Label(header_frame, text="Data:").pack(side=tk.LEFT, padx=(20,0))
+        ttk.Label(header_frame, textvariable=self.data_emissao).pack(side=tk.LEFT, padx=5)
+        
+        # Cliente e Veículo
+        cliente_frame = ttk.LabelFrame(main_frame, text="Cliente e Veículo", padding="10")
+        cliente_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Button(cliente_frame, text="Selecionar Cliente", 
+                  command=self.selecionar_cliente).pack(anchor=tk.W, pady=2)
+        ttk.Label(cliente_frame, textvariable=self.cliente_nome).pack(anchor=tk.W, fill=tk.X)
+        
+        ttk.Button(cliente_frame, text="Selecionar Veículo", 
+                  command=self.selecionar_veiculo).pack(anchor=tk.W, pady=2)
+        ttk.Label(cliente_frame, textvariable=self.cliente_veiculo).pack(anchor=tk.W, fill=tk.X)
+        
+        # Serviço Solicitado
+        servico_frame = ttk.LabelFrame(main_frame, text="Serviço Solicitado", padding="10")
+        servico_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Entry(servico_frame, textvariable=self.servico_solicitado, width=80).pack(fill=tk.X)
+        
         # Itens da OS
-        frame_itens = ttk.LabelFrame(main_frame, text="Itens da Ordem de Serviço", padding="10")
-        frame_itens.pack(fill=tk.BOTH, expand=True, pady=5)
-
-        columns = ('seq', 'descricao', 'quantidade', 'valor_unit', 'valor_total')
-        self.tree_itens = ttk.Treeview(frame_itens, columns=columns, show='headings', height=8)
-
-        # Configurar colunas
-        self.tree_itens.heading('seq', text='Seq')
-        self.tree_itens.heading('descricao', text='Descrição')
-        self.tree_itens.heading('quantidade', text='Qtd')
-        self.tree_itens.heading('valor_unit', text='Vl. Unitário')
-        self.tree_itens.heading('valor_total', text='Vl. Total')
-
-        self.tree_itens.column('seq', width=40, anchor=tk.CENTER)
-        self.tree_itens.column('descricao', width=400, anchor=tk.W)
-        self.tree_itens.column('quantidade', width=60, anchor=tk.CENTER)
-        self.tree_itens.column('valor_unit', width=100, anchor=tk.E)
-        self.tree_itens.column('valor_total', width=100, anchor=tk.E)
-
+        itens_frame = ttk.LabelFrame(main_frame, text="Itens da OS", padding="10")
+        itens_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        # Treeview para itens
+        columns = ('Descrição', 'Quantidade', 'Valor Unit.', 'Valor Total')
+        self.tree_itens = ttk.Treeview(itens_frame, columns=columns, show='headings', height=8)
+        
+        for col in columns:
+            self.tree_itens.heading(col, text=col)
+            self.tree_itens.column(col, width=120)
+        
+        self.tree_itens.column('Descrição', width=300)
+        
         self.tree_itens.pack(fill=tk.BOTH, expand=True)
-
-        # Frame para adicionar itens
-        frame_add_item = ttk.Frame(frame_itens)
-        frame_add_item.pack(fill=tk.X, pady=5)
-
-        ttk.Label(frame_add_item, text="Descrição:").pack(side=tk.LEFT, padx=2)
-        self.entry_descricao = ttk.Entry(frame_add_item, width=40)
-        self.entry_descricao.pack(side=tk.LEFT, padx=2)
-
-        ttk.Label(frame_add_item, text="Qtd:").pack(side=tk.LEFT, padx=2)
-        self.entry_quantidade = ttk.Entry(frame_add_item, width=5)
-        self.entry_quantidade.pack(side=tk.LEFT, padx=2)
-
-        ttk.Label(frame_add_item, text="Vl. Unit:").pack(side=tk.LEFT, padx=2)
-        self.entry_valor_unit = ttk.Entry(frame_add_item, width=10)
-        self.entry_valor_unit.pack(side=tk.LEFT, padx=2)
-
-        btn_add_item = ttk.Button(frame_add_item, text="Adicionar", command=self.adicionar_item)
-        btn_add_item.pack(side=tk.LEFT, padx=10)
-
-        btn_remover_item = ttk.Button(frame_add_item, text="Remover", command=self.remover_item)
-        btn_remover_item.pack(side=tk.LEFT, padx=2)
-
-        # Totais
-        frame_totais = ttk.Frame(main_frame)
-        frame_totais.pack(fill=tk.X, pady=5)
-
-        ttk.Label(frame_totais, text="Valor Total:", style='Total.TLabel').pack(side=tk.LEFT, padx=5)
-        ttk.Label(frame_totais, textvariable=self.valor_total, style='Total.TLabel').pack(side=tk.LEFT)
-
-        # Observações
-        frame_obs = ttk.LabelFrame(main_frame, text="Observações", padding="10")
-        frame_obs.pack(fill=tk.X, pady=5)
-        ttk.Entry(frame_obs, textvariable=self.observacoes, width=100).pack(fill=tk.X)
-
-        # Botões finais
-        frame_botoes = ttk.Frame(main_frame)
-        frame_botoes.pack(fill=tk.X, pady=10)
-
-        ttk.Button(frame_botoes, text="Fechar OS", command=self.fechar_os).pack(side=tk.LEFT, padx=5)
-        ttk.Button(frame_botoes, text="Imprimir OS", command=self.gerar_pdf_os).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(frame_botoes, text="Salvar OS", command=self.salvar_os).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(frame_botoes, text="Limpar Tudo", command=self.limpar_tudo).pack(side=tk.RIGHT, padx=5)
+        
+        # Controles de itens
+        controles_frame = ttk.Frame(itens_frame)
+        controles_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(controles_frame, text="Descrição:").pack(side=tk.LEFT)
+        self.desc_item = ttk.Entry(controles_frame, width=30)
+        self.desc_item.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(controles_frame, text="Qtd:").pack(side=tk.LEFT)
+        self.qtd_item = ttk.Entry(controles_frame, width=8)
+        self.qtd_item.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(controles_frame, text="Valor:").pack(side=tk.LEFT)
+        self.valor_item = ttk.Entry(controles_frame, width=10)
+        self.valor_item.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(controles_frame, text="Adicionar", 
+                  command=self.adicionar_item).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(controles_frame, text="Remover", 
+                  command=self.remover_item).pack(side=tk.LEFT, padx=5)
+        
+        # Total e Observações
+        total_frame = ttk.Frame(main_frame)
+        total_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(total_frame, text="Valor Total:", font=('Arial', 10, 'bold')).pack(side=tk.LEFT)
+        ttk.Label(total_frame, textvariable=self.valor_total, font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=5)
+        
+        obs_frame = ttk.LabelFrame(main_frame, text="Observações", padding="10")
+        obs_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Entry(obs_frame, textvariable=self.observacoes).pack(fill=tk.X)
+        
+        # Botões
+        botoes_frame = ttk.Frame(main_frame)
+        botoes_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Button(botoes_frame, text="Salvar OS", 
+                  command=self.salvar_os).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(botoes_frame, text="Imprimir OS", 
+                  command=self.gerar_pdf_os).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(botoes_frame, text="Fechar OS", 
+                  command=self.fechar_os).pack(side=tk.LEFT, padx=5)
+        
+        #ttk.Button(botoes_frame, text="Limpar", 
+        #          command=self.limpar_os).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(botoes_frame, text="Fechar", 
+                  command=self.os_window.destroy).pack(side=tk.RIGHT, padx=5)
 
     def criar_widgets(self):
         # Frame principal que contém o canvas e a scrollbar
@@ -1799,6 +1775,45 @@ class Main:
         menu_os.add_command(label="Nova OS", command=self.nova_os)
 
         menubar.add_cascade(label="OS", menu=menu_os)
+
+        # Frame principal
+        main_frame = ttk.Frame(self.root, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Título
+        titulo = ttk.Label(main_frame, text="Platypus v2 - Sistema de Gestão", 
+                          font=('Arial', 18, 'bold'))
+        titulo.pack(pady=20)
+        
+        # Subtítulo
+        subtitulo = ttk.Label(main_frame, text="Sistema completo para gestão de oficina mecânica",
+                             font=('Arial', 12))
+        subtitulo.pack(pady=10)
+        
+        # Frame de botões
+        botoes_frame = ttk.Frame(main_frame)
+        botoes_frame.pack(pady=30)
+        
+        # Botões principais
+        botoes = [
+            ("📋 Nova OS", self.nova_os),
+            ("👥 Clientes", self.rel_clientes),
+            ("🚗 Veículos", self.rel_veiculos),
+            ("🔧 Estoque", self.estoque),
+            #("📊 Relatórios", self.listar_os),
+            #("💾 Backup", self.fazer_backup)
+        ]
+        
+        for i, (texto, comando) in enumerate(botoes):
+            btn = ttk.Button(botoes_frame, text=texto, command=comando, width=20)
+            btn.grid(row=i//3, column=i%3, padx=10, pady=10)
+        
+        # Status
+        status_frame = ttk.Frame(main_frame)
+        status_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+        
+        self.status_label = ttk.Label(status_frame, text="Sistema pronto - Banco de dados conectado")
+        self.status_label.pack()
 
 if __name__ == "__main__":
     root = tk.Tk()
