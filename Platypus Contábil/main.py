@@ -71,6 +71,55 @@ class Main:
         # Lista de itens da OS
         self.itens_os = []
     
+    #Carregar Lista
+    def carregar_lista_clientes(self, filtro=None):
+        """Carrega a lista de clientes na treeview"""
+        # Limpa a treeview
+        for item in self.tree_clientes.get_children():
+            self.tree_clientes.delete(item)
+            
+        # Consulta os clientes no banco de dados
+        if filtro:
+            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
+                            FROM clientes 
+                            WHERE nome LIKE ? OR cnpj LIKE ? 
+                            ORDER BY nome''', 
+                        (f'%{filtro}%', f'%{filtro}%'))
+        else:
+            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
+                            FROM clientes 
+                            ORDER BY nome''')
+            
+        clientes = self.c.fetchall()
+            
+        # Adiciona os clientes na treeview
+        for cliente in clientes:
+            self.tree_clientes.insert('', tk.END, values=cliente)
+
+    #Carregar Lista
+    def carregar_lista_peca(self, filtro=None):
+
+        # Limpa a treeview
+        for item in self.tree_pecas.get_children():
+            self.tree_pecas.delete(item)
+            
+        # Consulta os clientes no banco de dados
+        if filtro:
+            self.c.execute('''SELECT id, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda 
+                                FROM pecas 
+                                WHERE descr LIKE ? OR cod_pec LIKE ? 
+                                ORDER BY id''', (f'%{filtro}%', f'%{filtro}%'))
+        else:
+            self.c.execute('''SELECT id, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda 
+                                FROM pecas 
+                                ORDER BY id''')
+            
+        pecas = self.c.fetchall()
+            
+        # Adiciona os clientes na treeview
+        for peca in pecas:
+            self.tree_pecas.insert('', tk.END, values=peca)
+
     def gerar_numero_os(self):
         """Gera um número fictício de OS baseado na data/hora"""
         return datetime.now().strftime("%Y%m%d%H%M")
@@ -495,10 +544,10 @@ class Main:
             pdf.cell(0, 10, "Dados do Cliente", 0, 1)
             pdf.set_font('Arial', '', 10)
             
-            pdf.cell(0, 5, f"Nome: {self.cliente_nome.get()}", 0, 1)
-            pdf.cell(0, 5, f"Endereço: {self.cliente_endereco.get()}", 0, 1)
-            pdf.cell(0, 5, f"Cidade: {self.cliente_cidade.get()}", 0, 1)
-            pdf.cell(0, 5, f"CPF/CNPJ: {self.cliente_cpf_cnpj.get()} - Tel: {self.cliente_telefone.get()}", 0, 1)
+            pdf.cell(0, 5, f"CPF/CNPJ: {self.cliente_nome.get()}", 0, 1)
+            pdf.cell(0, 5, f"Nome: {self.cliente_endereco.get()}", 0, 1)
+            pdf.cell(0, 5, f"Endereço: {self.cliente_cidade.get()}", 0, 1)
+            pdf.cell(0, 5, f"Cidade: {self.cliente_cpf_cnpj.get()} - Tel: {self.cliente_telefone.get()}", 0, 1)
             
             pdf.ln(5)
             
@@ -719,9 +768,9 @@ class Main:
     
     def adicionar_item(self):
         """Adiciona um novo item à ordem de serviço"""
-        descricao = self.entry_descricao.get()
-        quantidade = self.entry_quantidade.get()
-        valor_unit = self.entry_valor_unit.get()
+        descricao = self.desc_item.get()
+        quantidade = self.qtd_item.get()
+        valor_unit = self.valor_item.get()
         
         if not descricao or not quantidade or not valor_unit:
             messagebox.showwarning("Atenção", "Preencha todos os campos do item!")
@@ -747,10 +796,10 @@ class Main:
         self.atualizar_total()
         
         # Limpa campos
-        self.entry_descricao.delete(0, tk.END)
-        self.entry_quantidade.delete(0, tk.END)
-        self.entry_valor_unit.delete(0, tk.END)
-        self.entry_descricao.focus()
+        self.desc_item.delete(0, tk.END)
+        self.qtd_item.delete(0, tk.END)
+        self.valor_item.delete(0, tk.END)
+        self.desc_item.focus()
     
     def remover_item(self):
         """Remove o item selecionado da ordem de serviço"""
@@ -884,10 +933,110 @@ class Main:
             self.cliente_telefone.set(cliente[5])
             self.cliente_email.set(cliente[6])
 
+    def atualizar_cliente(self, cliente_id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento, janela):
+        """Atualiza os dados do cliente no banco de dados"""
+        if not nome:
+            messagebox.showerror("Erro", "O campo nome é obrigatório!")
+            return
+            
+        try:
+            self.c.execute('''UPDATE clientes SET 
+                            cnpj=?, nome=?, endereco=?, cidade=?, telefone=?, 
+                            email=?, responsavel=?, cpf_responsavel=?, dt_nascimento=?
+                            WHERE id=?''',
+                        (cnpj, nome, endereco, cidade, telefone, email, 
+                        responsavel, cpf_responsavel, dt_nascimento, cliente_id))
+            
+            self.conn.commit()
+            messagebox.showinfo("Sucesso", "Cliente atualizado com sucesso!")
+            
+            # Fecha a janela de edição
+            janela.destroy()
+            
+            # Atualiza a lista de clientes se estiver aberta
+            if hasattr(self, 'tree_clientes') and self.tree_clientes.winfo_exists():
+                self.carregar_lista_clientes()
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao atualizar cliente: {str(e)}")
+
     def abrir_editor_cliente(self, cliente_data):
+        """Abre janela para editar cliente existente"""
         editor = tk.Toplevel(self.root)
         editor.title("Editar Cliente")
-        editor.geometry("600x500")
+        editor.geometry("800x300")
+        editor.resizable(False, False)
+        editor.transient(self.root)
+        editor.grab_set()
+
+        frame = ttk.Frame(editor, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Preenche os campos com os dados do cliente
+        ttk.Label(frame, text="CNPJ/CPF").grid(row=0, column=0, sticky=tk.W, pady=5)
+        cnpj_entry = ttk.Entry(frame, width=40)
+        cnpj_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+        cnpj_entry.insert(0, cliente_data[1] if cliente_data[1] else "")
+
+        ttk.Label(frame, text="Razão Social/Nome").grid(row=1, column=0, sticky=tk.W, pady=5)
+        nome_entry = ttk.Entry(frame, width=40)
+        nome_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+        nome_entry.insert(0, cliente_data[2] if cliente_data[2] else "")
+
+        ttk.Label(frame, text="Endereço").grid(row=2, column=0, sticky=tk.W, pady=5)
+        endereco_entry = ttk.Entry(frame, width=40)
+        endereco_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+        endereco_entry.insert(0, cliente_data[3] if cliente_data[3] else "")
+
+        ttk.Label(frame, text="Cidade/UF").grid(row=2, column=2, sticky=tk.E, pady=5)
+        cidade_entry = ttk.Entry(frame, width=40)
+        cidade_entry.grid(row=2, column=3, pady=5, padx=(10, 0))
+        cidade_entry.insert(0, cliente_data[4] if cliente_data[4] else "")
+
+        ttk.Label(frame, text="Telefone").grid(row=3, column=0, sticky=tk.W, pady=5)
+        telefone_entry = ttk.Entry(frame, width=40)
+        telefone_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+        telefone_entry.insert(0, cliente_data[5] if cliente_data[5] else "")
+
+        ttk.Label(frame, text="E-mail").grid(row=3, column=2, sticky=tk.E, pady=5)
+        email_entry = ttk.Entry(frame, width=40)
+        email_entry.grid(row=3, column=3, pady=5, padx=(10, 0))
+        email_entry.insert(0, cliente_data[6] if cliente_data[6] else "")
+
+        ttk.Label(frame, text="Responsável").grid(row=4, column=0, sticky=tk.W, pady=5)
+        resp_entry = ttk.Entry(frame, width=40)
+        resp_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
+        resp_entry.insert(0, cliente_data[7] if cliente_data[7] else "")
+
+        ttk.Label(frame, text="CPF Responsável").grid(row=4, column=2, sticky=tk.E, pady=5)
+        cpfresp_entry = ttk.Entry(frame, width=40)
+        cpfresp_entry.grid(row=4, column=3, pady=5, padx=(10, 0))
+        cpfresp_entry.insert(0, cliente_data[8] if cliente_data[8] else "")
+
+        ttk.Label(frame, text="Data de Nascimento").grid(row=5, column=0, sticky=tk.E, pady=5)
+        dtnascimento_entry = ttk.Entry(frame, width=40)
+        dtnascimento_entry.grid(row=5, column=1, pady=5, padx=(10, 0))
+        dtnascimento_entry.insert(0, cliente_data[9] if cliente_data[9] else "")
+
+        # Frame para botões
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=6, column=0, columnspan=4, pady=20)
+        
+        # Botão Salvar
+        ttk.Button(btn_frame, text="Salvar Alterações", 
+                command=lambda: self.atualizar_cliente(
+                    cliente_data[0],  # ID do cliente
+                    cnpj_entry.get(), nome_entry.get(), endereco_entry.get(), 
+                    cidade_entry.get(), telefone_entry.get(), email_entry.get(), 
+                    resp_entry.get(), cpfresp_entry.get(), dtnascimento_entry.get(),
+                    editor
+                )).pack(side=tk.LEFT, padx=5)
+        
+        # Botão Cancelar
+        ttk.Button(btn_frame, text="Cancelar", command=editor.destroy).pack(side=tk.LEFT, padx=5)
+        
+        # Focar no campo nome
+        nome_entry.focus_set()
 
     def editar_veiculo(self):
         selected_item = self.tree_veiculos.selection()
@@ -932,20 +1081,31 @@ class Main:
 
     def editar_cliente(self):
         """Edita o cliente selecionado na lista"""
-        selected_item = self.tree_clientes.selection()
-        if not selected_item:
-            messagebox.showwarning("Atenção", "Selecione um cliente para editar!")
-            return
-        
-        cliente_id = self.tree_clientes.item(selected_item)['values'][0]
-        self.c.execute("SELECT * FROM clientes WHERE id=?", (cliente_id,))
-        cliente_data = self.c.fetchone()
-        
-        if cliente_data:
-            # Abre janela de edição com dados pré-carregados
-            self.abrir_editor_cliente(cliente_data)
-        else:
-            messagebox.showerror("Erro", "Cliente não encontrado!")
+        try:
+            # Verifica se a treeview existe e está disponível
+            if not hasattr(self, 'tree_clientes') or not self.tree_clientes.winfo_exists():
+                messagebox.showwarning("Atenção", "Lista de clientes não disponível. Abra a lista de clientes primeiro!")
+                return
+            
+            selected_item = self.tree_clientes.selection()
+            if not selected_item:
+                messagebox.showwarning("Atenção", "Selecione um cliente para editar!")
+                return
+            
+            cliente_id = self.tree_clientes.item(selected_item)['values'][0]
+            self.c.execute("SELECT * FROM clientes WHERE id=?", (cliente_id,))
+            cliente_data = self.c.fetchone()
+            
+            if cliente_data:
+                # Abre janela de edição com dados pré-carregados
+                self.abrir_editor_cliente(cliente_data)
+            else:
+                messagebox.showerror("Erro", "Cliente não encontrado!")
+                
+        except tk.TclError as e:
+            messagebox.showerror("Erro", f"Erro ao acessar a lista de clientes: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro inesperado: {e}")
 
     def abrir_gerenciador_clientes(self):
         """Abre a janela de gerenciamento de clientes"""
@@ -1048,55 +1208,6 @@ class Main:
         # Adiciona os veiculos na treeview
         for veiculo in veiculo:
             self.tree_veiculos.insert('', tk.END, values=veiculo)
-
-    #Carregar Lista
-    def carregar_lista_clientes(self, filtro=None):
-        """Carrega a lista de clientes na treeview"""
-        # Limpa a treeview
-        for item in self.tree_clientes.get_children():
-            self.tree_clientes.delete(item)
-            
-        # Consulta os clientes no banco de dados
-        if filtro:
-            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
-                            FROM clientes 
-                            WHERE nome LIKE ? OR cnpj LIKE ? 
-                            ORDER BY nome''', 
-                        (f'%{filtro}%', f'%{filtro}%'))
-        else:
-            self.c.execute('''SELECT id, cnpj, nome, endereco, cidade, telefone, email, responsavel, cpf_responsavel, dt_nascimento 
-                            FROM clientes 
-                            ORDER BY nome''')
-            
-        clientes = self.c.fetchall()
-            
-        # Adiciona os clientes na treeview
-        for cliente in clientes:
-            self.tree_clientes.insert('', tk.END, values=cliente)
-
-    #Carregar Lista
-    def carregar_lista_peca(self, filtro=None):
-
-        # Limpa a treeview
-        for item in self.tree_pecas.get_children():
-            self.tree_pecas.delete(item)
-            
-        # Consulta os clientes no banco de dados
-        if filtro:
-            self.c.execute('''SELECT id, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda 
-                                FROM pecas 
-                                WHERE descr LIKE ? OR cod_pec LIKE ? 
-                                ORDER BY id''', (f'%{filtro}%', f'%{filtro}%'))
-        else:
-            self.c.execute('''SELECT id, cod_nf, cod_in, descr, fabric, cod_pec, vlr_cust, vlr_venda 
-                                FROM pecas 
-                                ORDER BY id''')
-            
-        pecas = self.c.fetchall()
-            
-        # Adiciona os clientes na treeview
-        for peca in pecas:
-            self.tree_pecas.insert('', tk.END, values=peca)
 
     #Novo Cliente
     def novo_cliente(self):
@@ -1609,9 +1720,9 @@ class Main:
     #OS
     def nova_os(self):
         """Abre janela para nova ordem de serviço"""
-        self.os_window = tk.Toplevel(self.root)
-        self.os_window.title("Nova Ordem de Serviço")
-        self.os_window.geometry("900x700")
+        self.nova_os_wnd = tk.Toplevel(self.root)
+        self.nova_os_wnd.title("Nova Ordem de Serviço")
+        self.nova_os_wnd.geometry("900x700")
         
         # Variáveis da OS
         self.numero_os = tk.StringVar(value=self.gerar_numero_os())
@@ -1623,7 +1734,7 @@ class Main:
         self.valor_total = tk.StringVar(value="R$ 0,00")
         self.itens_os = []
         
-        main_frame = ttk.Frame(self.os_window, padding="10")
+        main_frame = ttk.Frame(self.nova_os_wnd, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Cabeçalho OS
@@ -1721,7 +1832,7 @@ class Main:
         #          command=self.limpar_os).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(botoes_frame, text="Fechar", 
-                  command=self.os_window.destroy).pack(side=tk.RIGHT, padx=5)
+                  command=self.nova_os_wnd.destroy).pack(side=tk.RIGHT, padx=5)
 
     def criar_widgets(self):
         # Frame principal que contém o canvas e a scrollbar
