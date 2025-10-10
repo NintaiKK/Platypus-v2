@@ -1907,11 +1907,11 @@ class Main:
         
         # Botões principais
         botoes = [
-            ("📋 Nova OS", self.nova_os),
+            ("📋 Ordens de serviço", self.nova_os),
             ("👥 Clientes", self.rel_clientes),
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
-            #("📊 Relatórios", self.listar_os),
+            ("💰 Financeiro", self.estoque),
             #("💾 Backup", self.fazer_backup)
         ]
         
