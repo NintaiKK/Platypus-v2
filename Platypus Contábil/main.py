@@ -29,7 +29,7 @@ class Main:
         self.criar_tabela_veiculos()
         self.criar_tabela_pecas()
         self.criar_tabela_financeiro()
-
+        self.criar_tabela_contas_pagar()
     
         
         # Variáveis para os dados do cliente
@@ -144,6 +144,30 @@ class Main:
         # Adiciona os clientes na treeview
         for transação in transações:
             self.tree_financeiro.insert('', tk.END, values=transação)
+
+    def criar_tabela_contas_pagar(self, filtro=None):
+        try:
+                conn = sqlite3.connect('platycon.db')
+                cursor = conn.cursor()
+                    
+                # Criar tabela se não existir
+                cursor.execute('''
+                        CREATE TABLE IF NOT EXISTS cont_pgr (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            desc TEXT NOT NULL,
+                            vlr TEXT NOT NULL,
+                            venc TEXT,
+                            dt_pgto TEXT,
+                            status TEXT,
+                            data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                ''')
+                    
+                conn.commit()
+                conn.close()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar tabela : {str(e)}")
 
     def gerar_numero_os(self):
         """Gera um número fictício de OS baseado na data/hora"""
@@ -1233,16 +1257,9 @@ class Main:
         self.carregar_lista_veiculos()
 
     def selecionar_cliente(self):
-        """Abre o gerenciador de clientes em modo de seleção"""
-        # Verifica se a janela de OS está aberta
-        if not hasattr(self, 'nova_os_wnd') or not self.nova_os_wnd.winfo_exists():
-            messagebox.showwarning("Atenção", "Abra uma OS primeiro para selecionar cliente!")
-            return
-        
         self.rel_clientes()
 
     def selecionar_veiculo(self):
-        """Abre o gerenciador de clientes em modo de seleção"""
         self.rel_veiculos()
 
     def carregar_lista_veiculos(self, filtro=None):
@@ -2179,6 +2196,98 @@ class Main:
         
         ttk.Button(botoes_frame, text="Fechar", 
                   command=self.nova_os_wnd.destroy).pack(side=tk.RIGHT, padx=5)
+        
+    def novo_conta_pagar(self):
+
+        self.nova_cont_pagr_wnd = tk.Toplevel(self.root)
+        self.nova_cont_pagr_wnd.title("Registrar conta a pagar")
+        self.nova_cont_pagr_wnd.geometry("800x400")
+
+        self.nova_cont_pagr_wnd.transient(self.root)
+        self.nova_cont_pagr_wnd.grab_set()
+
+        frame = ttk.Frame(self.nova_cont_pagr_wnd, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        ttk.Button(frame, text="Selecionar Cliente",
+                  command=self.selecionar_cliente).pack(anchor=tk.W, pady=2)
+        ttk.Label(frame, textvariable=self.cliente_nome).pack(anchor=tk.W, fill=tk.X)
+
+        ttk.Label(frame, text="Descrição").grid(row=0, column=0, sticky=tk.W, pady=5)
+        desc_entry = ttk.Entry(frame, width=40)
+        desc_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Valor").grid(row=1, column=0, sticky=tk.W, pady=5)
+        vlr_entry = ttk.Entry(frame, width=40)
+        vlr_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Vencimento").grid(row=2, column=0, sticky=tk.W, pady=5)
+        venc_entry = ttk.Entry(frame, width=40)
+        venc_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Data de pagamento").grid(row=3, column=0, sticky=tk.W, pady=5)
+        data_pgto_entry = ttk.Entry(frame, width=40)
+        data_pgto_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Status").grid(row=4, column=0, sticky=tk.W, pady=5)
+        status_entry = ttk.Combobox(frame, width=40)
+        status_entry['values'] = ('Pago',
+                                  'Em aberto',
+                                  'Vencida')
+        status_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
+
+        # Frame para botões
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=6, column=0, columnspan=2, pady=20)
+            
+        # Botão Salvar
+        ttk.Button(btn_frame, text="Salvar", command=lambda: self.salvar_conta_pagr(
+            desc_entry.get(), vlr_entry.get(), venc_entry.get(), status_entry.get(), data_pgto_entry.get(), vlr_entry.get()
+        )).pack(side=tk.LEFT, padx=5)
+            
+        # Botão Cancelar
+        ttk.Button(btn_frame, text="Cancelar", command=self.nova_cont_pagr_wnd.destroy).pack(side=tk.LEFT, padx=5)
+            
+        # Focar no campo nome
+        desc_entry.focus_set()
+
+    # Salvar transação
+    def salvar_conta_pagar(self, desc, vlr, venc, dt_pgto, status):
+        if not desc:
+            messagebox.showerror("Erro", "O campo descrição é obrigatório!")
+            return
+            
+        try:
+            conn = sqlite3.connect('platycon.db')
+            cursor = conn.cursor()
+                
+            # Criar tabela se não existir
+            cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS cont_pgr (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        desc TEXT NOT NULL,
+                        vlr TEXT NOT NULL,
+                        venc TEXT,
+                        dt_pgto TEXT,
+                        status TEXT,
+                        data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+            ''')
+                
+            # Inserir cliente
+            cursor.execute(
+                "INSERT INTO cont_pgr (desc, vlr, venc, dt_pgto, status) VALUES (?, ?, ?, ?, ?)",
+                (desc, vlr, venc, dt_pgto, status)
+            )
+                
+            conn.commit()
+            conn.close()
+                
+            messagebox.showinfo("Sucesso", "Conta cadastrada com sucesso!")
+            self.nova_cont_pagr_wnd.destroy()
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar conta: {str(e)}")
 
     def criar_widgets(self):
         # Frame principal que contém o canvas e a scrollbar
@@ -2234,11 +2343,19 @@ class Main:
         menubar.add_cascade(label="OS", menu=menu_os)
 
         #Financeiro
-        menu_os = tk.Menu(menubar, tearoff=0)
-        menu_os.add_command(label="Transações", command=self.rel_fin)
-        menu_os.add_command(label="Registrar transações", command=self.novo_financeiro)
+        menu_financeiro = tk.Menu(menubar, tearoff=0)
+        menu_financeiro.add_command(label="Transações", command=self.rel_fin)
+        menu_financeiro.add_command(label="Registrar transações", command=self.novo_financeiro)
 
-        menubar.add_cascade(label="Financeiro", menu=menu_os)
+        menubar.add_cascade(label="Financeiro", menu=menu_financeiro)
+
+        #Contas
+        menu_contas = tk.Menu(menubar, tearoff=0)
+        menu_contas.add_command(label="Contas a pagar", command=self.rel_fin)
+        menu_contas.add_command(label="Contas a receber", command=self.novo_financeiro)
+        menu_contas.add_command(label="Previsão de recebimentos", command=self.novo_financeiro)
+
+        menubar.add_cascade(label="Contas", menu=menu_os)
 
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
@@ -2265,6 +2382,7 @@ class Main:
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
             ("💰 Transações", self.rel_fin),
+            ("💸 Contas", self.novo_conta_pagar)
             #("🧾 Recibos", self.estoque)
             #("📑 Certificados", self.estoque)
             #("💾 Backup", self.fazer_backup)
