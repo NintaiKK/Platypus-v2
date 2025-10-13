@@ -1717,6 +1717,75 @@ class Main:
         # Carrega a lista de veículos
         self.carregar_lista_peca()
 
+    def rel_fin(self):
+
+        self.rel_fin_wnd = tk.Toplevel(self.root)
+        self.rel_fin_wnd.title("Movimentações")
+        self.rel_fin_wnd.geometry("1200x500")
+        self.rel_fin_wnd.resizable(True, True)
+
+        self.rel_fin_wnd.transient(self.root)
+        self.rel_fin_wnd.grab_set()
+
+        # Frame principal
+        main_frame = ttk.Frame(self.rel_fin_wnd, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de pesquisa
+        frame_pesq_oper = ttk.Frame(main_frame)
+        frame_pesq_oper.pack(fill=tk.X, pady=5)
+            
+        ttk.Label(frame_pesq_oper, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_oper = ttk.Entry(frame_pesq_oper, width=30)
+        self.entry_pesquisa_oper.pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_oper.bind("<KeyRelease>", self.pesquisar_peca)
+            
+        ttk.Button(frame_pesq_oper, text="Registrar operação", 
+            command=self.novo_fin).pack(side=tk.RIGHT, padx=5)
+            
+        # Treeview para listar veiculos
+        columns = ('id','Data', 'Tipo', 'Descrição', 'Fonte', 'Forma Pagamento', 'Valor')
+        self.tree_finan = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
+            
+        # Cabeçalhos
+        self.tree_pecas.heading('id', text='ID')
+        self.tree_pecas.heading('data', text='Data')
+        self.tree_pecas.heading('tipo', text='Tipo')
+        self.tree_pecas.heading('descr', text='Descrição')
+        self.tree_pecas.heading('fonte', text='Fonte')
+        self.tree_pecas.heading('forma_pgto', text='Forma de Pagamento')
+        self.tree_pecas.heading('vlr', text='Valor')
+            
+        # Largura das colunas
+        self.tree_pecas.column('id', width=50, anchor=tk.CENTER)
+        self.tree_pecas.column('cod_nf', width=80, anchor=tk.W)
+        self.tree_pecas.column('cod_in', width=80, anchor=tk.W)
+        self.tree_pecas.column('descr', width=150, anchor=tk.W)
+        self.tree_pecas.column('fabric', width=90, anchor=tk.W)
+        self.tree_pecas.column('cod_pec', width=150, anchor=tk.W)
+        self.tree_pecas.column('vlr_cust', width=80, anchor=tk.W)
+        self.tree_pecas.column('vlr_venda', width=80, anchor=tk.W)
+            
+        self.tree_pecas.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de rolagem
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_pecas.yview)
+        self.tree_pecas.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+        # Botões de ação
+        frame_botoes = ttk.Frame(main_frame)
+        frame_botoes.pack(fill=tk.X, pady=10)
+            
+        #ttk.Button(frame_botoes, text="Editar", 
+        #    command=self.editar_veiculo).pack(side=tk.LEFT, padx=5)
+            
+        #ttk.Button(frame_botoes, text="Excluir", 
+        #    command=self.excluir_veiculo).pack(side=tk.LEFT, padx=5)
+            
+        # Carrega a lista de veículos
+        self.carregar_lista_peca()
+
     #OS
     def nova_os(self):
         """Abre janela para nova ordem de serviço"""
@@ -1911,7 +1980,8 @@ class Main:
             ("👥 Clientes", self.rel_clientes),
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
-            ("💰 Financeiro", self.estoque),
+            ("💰 Financeiro", self.rel_fin),
+            #("🧾 Recibos", self.estoque)
             #("💾 Backup", self.fazer_backup)
         ]
         
