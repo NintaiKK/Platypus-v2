@@ -28,6 +28,7 @@ class Main:
         self.criar_tabela_clientes()
         self.criar_tabela_veiculos()
         self.criar_tabela_pecas()
+        self.criar_tabela_financeiro()
 
     
         
@@ -120,6 +121,30 @@ class Main:
         for peca in pecas:
             self.tree_pecas.insert('', tk.END, values=peca)
 
+    #Carregar Lista
+    def carregar_lista_financeiro(self, filtro=None):
+
+        # Limpa a treeview
+        for item in self.tree_financeiro.get_children():
+            self.tree_financeiro.delete(item)
+            
+        # Consulta os clientes no banco de dados
+        if filtro:
+            self.c.execute('''SELECT id, data, tipo, descr, fonte, forma_pgto, vlr 
+                                FROM financeiro 
+                                WHERE data LIKE ? OR fonte LIKE ? 
+                                ORDER BY id''', (f'%{filtro}%', f'%{filtro}%'))
+        else:
+            self.c.execute('''SELECT id, data, tipo, descr, fonte, forma_pgto, vlr  
+                                FROM financeiro 
+                                ORDER BY id''')
+            
+        transações = self.c.fetchall()
+            
+        # Adiciona os clientes na treeview
+        for transação in transações:
+            self.tree_financeiro.insert('', tk.END, values=transação)
+
     def gerar_numero_os(self):
         """Gera um número fictício de OS baseado na data/hora"""
         return datetime.now().strftime("%Y%m%d%H%M")
@@ -154,6 +179,7 @@ class Main:
                 )
             ''')
             self.conn.commit()
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar tabela OS: {str(e)}")
 
@@ -175,6 +201,7 @@ class Main:
                 )
             ''')
             self.conn.commit()
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
 
@@ -192,6 +219,7 @@ class Main:
                 )
             ''')
             self.conn.commit()
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
 
@@ -211,6 +239,32 @@ class Main:
                 )
             ''')
             self.conn.commit()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
+
+    def criar_tabela_financeiro(self):
+        try:
+            conn = sqlite3.connect('platycon.db')
+            cursor = conn.cursor()
+                
+            # Criar tabela se não existir
+            cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS financeiro (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        data TEXT NOT NULL,
+                        tipo TEXT NOT NULL,
+                        descr TEXT,
+                        fonte TEXT,
+                        forma_pgto TEXT,
+                        vlr TEXT,
+                        data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+            ''')
+                
+            conn.commit()
+            conn.close()
+
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao criar tabela: {str(e)}")
 
@@ -228,6 +282,11 @@ class Main:
         """Pesquisa veiculos conforme texto digitado"""
         filtro = self.entry_pesquisa_peca.get()
         self.carregar_lista_peca(filtro)
+
+    def pesquisar_financeiro(self, event=None):
+        """Pesquisa transações conforme texto digitado"""
+        filtro = self.entry_pesquisa_oper.get()
+        self.carregar_lista_financeiro(filtro)
 
     def carregar_os_dialog(self):
         #Abre diálogo para selecionar uma OS para carregar
@@ -1717,6 +1776,225 @@ class Main:
         # Carrega a lista de veículos
         self.carregar_lista_peca()
 
+    def novo_financeiro(self):
+
+        self.novo_fin_wnd = tk.Toplevel(self.root)
+        self.novo_fin_wnd.title("Cadastrar Transação")
+        self.novo_fin_wnd.geometry("800x400")
+        self.novo_fin_wnd.resizable(True, True)
+
+        self.novo_fin_wnd.transient(self.root)
+        self.novo_fin_wnd.grab_set()
+
+        frame = ttk.Frame(self.novo_fin_wnd, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frame, text="Data").grid(row=0, column=0, sticky=tk.W, pady=5)
+        cnpj_entry = ttk.Entry(frame, width=40)
+        cnpj_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Tipo").grid(row=1, column=0, sticky=tk.W, pady=5)
+        tipo_entry = ttk.Combobox(frame, width=40)
+        tipo_entry['values'] = ('Saída',
+                                'Entrada')
+        tipo_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Descrição").grid(row=2, column=0, sticky=tk.W, pady=5)
+        descr_entry = ttk.Entry(frame, width=40)
+        descr_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Fonte").grid(row=2, column=2, sticky=tk.E, pady=5)
+        fonte_entry = ttk.Entry(frame, width=40)
+        fonte_entry.grid(row=2, column=3, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Forma de pagamento").grid(row=3, column=0, sticky=tk.W, pady=5)
+        form_pgto_entry = ttk.Combobox(frame, width=40)
+        form_pgto_entry['values'] = ('Pix',
+                                'Depósito',
+                                'Dinheiro',
+                                'Boleto')
+        form_pgto_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(frame, text="Valor").grid(row=3, column=2, sticky=tk.E, pady=5)
+        vlr_entry = ttk.Entry(frame, width=40)
+        vlr_entry.grid(row=3, column=3, pady=5, padx=(10, 0))
+
+        # Frame para botões
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=6, column=0, columnspan=2, pady=20)
+            
+        # Botão Salvar
+        ttk.Button(btn_frame, text="Salvar", command=lambda: self.salvar_financeiro(
+            cnpj_entry.get(), tipo_entry.get(), descr_entry.get(), fonte_entry.get(), form_pgto_entry.get(), vlr_entry.get()
+        )).pack(side=tk.LEFT, padx=5)
+            
+        # Botão Cancelar
+        ttk.Button(btn_frame, text="Cancelar", command=self.novo_fin_wnd.destroy).pack(side=tk.LEFT, padx=5)
+            
+        # Focar no campo nome
+        cnpj_entry.focus_set()
+
+    # Salvar transação
+    def salvar_financeiro(self, data, tipo, descr, fonte, forma_pgto, vlr):
+        if not fonte:
+            messagebox.showerror("Erro", "O campo nome é obrigatório!")
+            return
+            
+        try:
+            conn = sqlite3.connect('platycon.db')
+            cursor = conn.cursor()
+                
+            # Criar tabela se não existir
+            cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS financeiro (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        data TEXT NOT NULL,
+                        tipo TEXT NOT NULL,
+                        descr TEXT,
+                        fonte TEXT,
+                        forma_pgto TEXT,
+                        vlr TEXT,
+                        data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+            ''')
+                
+            # Inserir cliente
+            cursor.execute(
+                "INSERT INTO financeiro (data, tipo, descr, fonte, forma_pgto, vlr) VALUES (?, ?, ?, ?, ?, ?)",
+                (data, tipo, descr, fonte, forma_pgto, vlr)
+            )
+                
+            conn.commit()
+            conn.close()
+                
+            messagebox.showinfo("Sucesso", "Transação cadastrada com sucesso!")
+            self.novo_fin_wnd.destroy()
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar transação: {str(e)}")
+
+    def editar_financeiro(self):
+        """Edita a transação selecionado na lista"""
+        try:
+            # Verifica se a treeview existe e está disponível
+            if not hasattr(self, 'tree_financeiro') or not self.tree_financeiro.winfo_exists():
+                messagebox.showwarning("Atenção", "Lista de transações não disponível. Abra a lista de transações primeiro!")
+                return
+            
+            selected_item = self.tree_financeiro.selection()
+            if not selected_item:
+                messagebox.showwarning("Atenção", "Selecione uma transação para editar!")
+                return
+            
+            financeiro_id = self.tree_financeiro.item(selected_item)['values'][0]
+            self.c.execute("SELECT * FROM financeiro WHERE id=?", (financeiro_id,))
+            transação_data = self.c.fetchone()
+            
+            if transação_data:
+                # Abre janela de edição com dados pré-carregados
+                self.abrir_editor_transação(transação_data)
+            else:
+                messagebox.showerror("Erro", "Transação não encontrado!")
+                
+        except tk.TclError as e:
+            messagebox.showerror("Erro", f"Erro ao acessar a lista de transações: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro inesperado: {e}")
+
+    def abrir_editor_transação(self, transação_data):
+        """Abre janela para editar transação existente"""
+        editor = tk.Toplevel(self.root)
+        editor.title("Editar Transação")
+        editor.geometry("600x400")
+        editor.transient(self.root)
+        editor.grab_set()
+
+        frame = ttk.Frame(editor, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Preenche os campos com os dados do cliente
+        ttk.Label(frame, text="Data").grid(row=0, column=0, sticky=tk.W, pady=5)
+        data_entry = ttk.Entry(frame, width=40)
+        data_entry.grid(row=0, column=1, pady=5, padx=(10, 0))
+        data_entry.insert(0, transação_data[1] if transação_data[1] else "")
+
+        ttk.Label(frame, text="Tipo").grid(row=1, column=0, sticky=tk.W, pady=5)
+        tipo_entry = ttk.Combobox(frame, width=40)
+        tipo_entry['values'] = ('Saída',
+                                'Entrada')
+        tipo_entry.grid(row=1, column=1, pady=5, padx=(10, 0))
+        tipo_entry.insert(0, transação_data[2] if transação_data[2] else "")
+
+        ttk.Label(frame, text="Descrição").grid(row=2, column=0, sticky=tk.W, pady=5)
+        descr_entry = ttk.Entry(frame, width=40)
+        descr_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+        descr_entry.insert(0, transação_data[3] if transação_data[3] else "")
+
+        ttk.Label(frame, text="Fonte").grid(row=3, column=0, sticky=tk.W, pady=5)
+        fonte_entry = ttk.Entry(frame, width=40)
+        fonte_entry.grid(row=3, column=1, pady=5, padx=(10, 0))
+        fonte_entry.insert(0, transação_data[4] if transação_data[4] else "")
+
+        ttk.Label(frame, text="Forma de pagamento").grid(row=4, column=0, sticky=tk.W, pady=5)
+        form_pgto_entry = ttk.Combobox(frame, width=40)
+        form_pgto_entry['values'] = ('Pix',
+                                'Depósito',
+                                'Dinheiro',
+                                'Boleto')
+        form_pgto_entry.grid(row=4, column=1, pady=5, padx=(10, 0))
+        form_pgto_entry.insert(0, transação_data[5] if transação_data[5] else "")
+
+        ttk.Label(frame, text="Valor").grid(row=5, column=0, sticky=tk.W, pady=5)
+        vlr_entry = ttk.Entry(frame, width=40)
+        vlr_entry.grid(row=5, column=1, pady=5, padx=(10, 0))
+        vlr_entry.insert(0, transação_data[6] if transação_data[6] else "")
+
+        # Frame para botões
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=6, column=0, columnspan=4, pady=20)
+        
+        # Botão Salvar
+        ttk.Button(btn_frame, text="Salvar Alterações", 
+                command=lambda: self.atualizar_financeiro(
+                    transação_data[0],
+                    data_entry.get(), tipo_entry.get(), descr_entry.get(), 
+                    fonte_entry.get(), form_pgto_entry.get(), vlr_entry.get()
+                )).pack(side=tk.LEFT, padx=5)
+        
+        # Botão Cancelar
+        ttk.Button(btn_frame, text="Cancelar", command=editor.destroy).pack(side=tk.LEFT, padx=5)
+        
+        # Focar no campo nome
+        data_entry.focus_set()
+
+    def atualizar_financeiro(self, id, data, tipo, descr, fonte, forma_pgto, vlr):
+        """Atualiza os dados da transação no banco de dados"""
+        if not fonte:
+            messagebox.showerror("Erro", "O campo fonte é obrigatório!")
+            return
+            
+        try:
+            self.c.execute('''UPDATE financeiro SET 
+                            data=?, tipo=?, descr=?, fonte=?, forma_pgto=?, 
+                            vlr=?
+                            WHERE id=?''',
+                        (data, tipo, descr, fonte, forma_pgto, vlr, id))
+            
+            self.conn.commit()
+            messagebox.showinfo("Sucesso", "Transação atualizada com sucesso!")
+
+            for window in self.root.winfo_children():
+                if isinstance(window, tk.Toplevel) and window.title() == "Editar Transação":
+                    window.destroy()
+                    break
+            
+            # Atualiza a lista de clientes se estiver aberta
+            if hasattr(self, 'tree_financeiro') and self.tree_financeiro.winfo_exists():
+                self.carregar_lista_financeiro()
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao atualizar transação: {str(e)}")
+
     def rel_fin(self):
 
         self.rel_fin_wnd = tk.Toplevel(self.root)
@@ -1738,53 +2016,52 @@ class Main:
         ttk.Label(frame_pesq_oper, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
         self.entry_pesquisa_oper = ttk.Entry(frame_pesq_oper, width=30)
         self.entry_pesquisa_oper.pack(side=tk.LEFT, padx=5)
-        self.entry_pesquisa_oper.bind("<KeyRelease>", self.pesquisar_peca)
+        self.entry_pesquisa_oper.bind("<KeyRelease>", self.pesquisar_financeiro)
             
         ttk.Button(frame_pesq_oper, text="Registrar operação", 
-            command=self.novo_fin).pack(side=tk.RIGHT, padx=5)
+            command=self.novo_financeiro).pack(side=tk.RIGHT, padx=5)
             
         # Treeview para listar veiculos
-        columns = ('id','Data', 'Tipo', 'Descrição', 'Fonte', 'Forma Pagamento', 'Valor')
-        self.tree_finan = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
+        columns = ('id','data', 'tipo', 'descr', 'fonte', 'forma_pgto', 'vlr')
+        self.tree_financeiro = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
             
         # Cabeçalhos
-        self.tree_pecas.heading('id', text='ID')
-        self.tree_pecas.heading('data', text='Data')
-        self.tree_pecas.heading('tipo', text='Tipo')
-        self.tree_pecas.heading('descr', text='Descrição')
-        self.tree_pecas.heading('fonte', text='Fonte')
-        self.tree_pecas.heading('forma_pgto', text='Forma de Pagamento')
-        self.tree_pecas.heading('vlr', text='Valor')
+        self.tree_financeiro.heading('id', text='ID')
+        self.tree_financeiro.heading('data', text='Data')
+        self.tree_financeiro.heading('tipo', text='Tipo')
+        self.tree_financeiro.heading('descr', text='Descrição')
+        self.tree_financeiro.heading('fonte', text='Fonte')
+        self.tree_financeiro.heading('forma_pgto', text='Forma de Pagamento')
+        self.tree_financeiro.heading('vlr', text='Valor')
             
         # Largura das colunas
-        self.tree_pecas.column('id', width=50, anchor=tk.CENTER)
-        self.tree_pecas.column('cod_nf', width=80, anchor=tk.W)
-        self.tree_pecas.column('cod_in', width=80, anchor=tk.W)
-        self.tree_pecas.column('descr', width=150, anchor=tk.W)
-        self.tree_pecas.column('fabric', width=90, anchor=tk.W)
-        self.tree_pecas.column('cod_pec', width=150, anchor=tk.W)
-        self.tree_pecas.column('vlr_cust', width=80, anchor=tk.W)
-        self.tree_pecas.column('vlr_venda', width=80, anchor=tk.W)
+        self.tree_financeiro.column('id', width=50, anchor=tk.CENTER)
+        self.tree_financeiro.column('data', width=80, anchor=tk.W)
+        self.tree_financeiro.column('tipo', width=80, anchor=tk.W)
+        self.tree_financeiro.column('descr', width=150, anchor=tk.W)
+        self.tree_financeiro.column('fonte', width=90, anchor=tk.W)
+        self.tree_financeiro.column('forma_pgto', width=100, anchor=tk.W)
+        self.tree_financeiro.column('vlr', width=80, anchor=tk.W)
             
-        self.tree_pecas.pack(fill=tk.BOTH, expand=True)
+        self.tree_financeiro.pack(fill=tk.BOTH, expand=True)
             
         # Barra de rolagem
-        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_pecas.yview)
-        self.tree_pecas.configure(yscroll=scrollbar.set)
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_financeiro.yview)
+        self.tree_financeiro.configure(yscroll=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             
         # Botões de ação
         frame_botoes = ttk.Frame(main_frame)
         frame_botoes.pack(fill=tk.X, pady=10)
             
-        #ttk.Button(frame_botoes, text="Editar", 
-        #    command=self.editar_veiculo).pack(side=tk.LEFT, padx=5)
+        ttk.Button(frame_botoes, text="Editar", 
+            command=self.editar_financeiro).pack(side=tk.LEFT, padx=5)
             
-        #ttk.Button(frame_botoes, text="Excluir", 
-        #    command=self.excluir_veiculo).pack(side=tk.LEFT, padx=5)
+        ttk.Button(frame_botoes, text="Excluir", 
+            command=self.editar_financeiro).pack(side=tk.LEFT, padx=5)
             
         # Carrega a lista de veículos
-        self.carregar_lista_peca()
+        self.carregar_lista_financeiro()
 
     #OS
     def nova_os(self):
@@ -1956,6 +2233,13 @@ class Main:
 
         menubar.add_cascade(label="OS", menu=menu_os)
 
+        #Financeiro
+        menu_os = tk.Menu(menubar, tearoff=0)
+        menu_os.add_command(label="Transações", command=self.rel_fin)
+        menu_os.add_command(label="Registrar transações", command=self.novo_financeiro)
+
+        menubar.add_cascade(label="Financeiro", menu=menu_os)
+
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -1980,8 +2264,9 @@ class Main:
             ("👥 Clientes", self.rel_clientes),
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
-            ("💰 Financeiro", self.rel_fin),
+            ("💰 Transações", self.rel_fin),
             #("🧾 Recibos", self.estoque)
+            #("📑 Certificados", self.estoque)
             #("💾 Backup", self.fazer_backup)
         ]
         
