@@ -2351,11 +2351,11 @@ class Main:
 
         #Contas
         menu_contas = tk.Menu(menubar, tearoff=0)
-        menu_contas.add_command(label="Contas a pagar", command=self.rel_fin)
+        menu_contas.add_command(label="Contas a pagar", command=self.novo_conta_pagar)
         menu_contas.add_command(label="Contas a receber", command=self.novo_financeiro)
         menu_contas.add_command(label="Previsão de recebimentos", command=self.novo_financeiro)
 
-        menubar.add_cascade(label="Contas", menu=menu_os)
+        menubar.add_cascade(label="Contas", menu=menu_contas)
 
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
