@@ -1254,7 +1254,7 @@ class Main:
                   command=veiculos_window.destroy).pack(side=tk.RIGHT, padx=5)
         
         # Carrega a lista de clientes
-        self.carregar_lista_veiculos()
+        self.carregar_lista_clientes()
 
     def selecionar_cliente(self):
         self.rel_clientes()
