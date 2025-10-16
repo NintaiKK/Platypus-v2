@@ -2133,7 +2133,7 @@ class Main:
         itens_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
         # Treeview para itens
-        columns = ('Descrição', 'Quantidade', 'Valor Unit.', 'Valor Total')
+        columns = ('Nº','Descrição', 'Quantidade', 'Valor Unit.', 'Valor Total')
         self.tree_itens = ttk.Treeview(itens_frame, columns=columns, show='headings', height=8)
         
         for col in columns:
