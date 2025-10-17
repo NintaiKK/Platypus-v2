@@ -8,7 +8,6 @@ from tkinter import ttk, messagebox
 import os
 import csv
 import json
-import sqlite3
 
 class Main:
     def __init__(self, root):
@@ -2293,21 +2292,6 @@ class Main:
         # Frame principal que contém o canvas e a scrollbar
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Canvas rolável
-        canvas = tk.Canvas(main_frame)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-
-        # Frame interno onde os widgets serão adicionados
-        second_frame = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=second_frame, anchor="nw")
-
 
         #Barra menu cabeçalho
         menubar = tk.Menu(self.root)
@@ -2357,6 +2341,13 @@ class Main:
 
         menubar.add_cascade(label="Contas", menu=menu_contas)
 
+        #Recibos
+       ## menu_recibos = tk.Menu(menubar, tearoff=0)
+       # menu_recibos.add_command(label="Recibos", command=self.recibos)
+       # menu_recibos.add_command(label="Novo Recibo", command=self.novo_recibo)
+
+        #menubar.add_cascade(label="Recibos", menu=menu_recibos)
+
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -2382,9 +2373,8 @@ class Main:
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
             ("💰 Transações", self.rel_fin),
-            ("💸 Contas", self.novo_conta_pagar)
-            #("🧾 Recibos", self.estoque)
-            #("📑 Certificados", self.estoque)
+            ("💸 Contas", self.novo_conta_pagar),
+            #("🧾 Recibos", self.recibos)
             #("💾 Backup", self.fazer_backup)
         ]
         
