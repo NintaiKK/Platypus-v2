@@ -2369,6 +2369,9 @@ class Main:
         
         self.status_label = ttk.Label(status_frame, text="Sistema pronto - Banco de dados conectado")
         self.status_label.pack()
+        
+        self.versao_label = ttk.Label(status_frame, text="Versão 2.0.29")
+        self.versao_label.pack()
 
 if __name__ == "__main__":
     root = tk.Tk()
