@@ -12,7 +12,7 @@ import json
 class Main:
     def __init__(self, root):
         self.root = root
-        self.root.title("Platypus v2 - Contábil")
+        self.root.title("Platypus v2 - Gestão")
         self.root.geometry("1000x650")
         
         try:
@@ -317,6 +317,11 @@ class Main:
         dialog.title("Carregar Ordem de Serviço")
         dialog.geometry("800x500")
         
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
+        
         # Frame de pesquisa
         frame_pesquisa = ttk.Frame(dialog, padding="10")
         frame_pesquisa.pack(fill=tk.X)
@@ -422,6 +427,11 @@ class Main:
         dialog = tk.Toplevel(self.root)
         dialog.title("Lista de Ordens de Serviço")
         dialog.geometry("1000x600")
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
         
         # Frame de pesquisa
         frame_pesquisa = ttk.Frame(dialog, padding="10")
@@ -1039,6 +1049,11 @@ class Main:
         editor.resizable(False, False)
         editor.transient(self.root)
         editor.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         frame = ttk.Frame(editor, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1283,6 +1298,11 @@ class Main:
 
         self.novo_cli_wnd.transient(self.root)
         self.novo_cli_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         frame = ttk.Frame(self.novo_cli_wnd, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1389,6 +1409,11 @@ class Main:
 
         self.rel_cli_wnd.transient(self.root)
         self.rel_cli_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         # Frame principal
         main_frame = ttk.Frame(self.rel_cli_wnd, padding="10")
@@ -1469,6 +1494,11 @@ class Main:
 
         self.novo_veiculo_wnd.transient(self.root)
         self.novo_veiculo_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         frame = ttk.Frame(self.novo_veiculo_wnd, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1626,6 +1656,11 @@ class Main:
 
         self.nova_peca_wnd.transient(self.root)
         self.nova_peca_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         # Frame principal
         main_frame = ttk.Frame(self.nova_peca_wnd, padding="10")
@@ -1720,6 +1755,11 @@ class Main:
 
         self.estoque_wnd.transient(self.root)
         self.estoque_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         # Frame principal
         main_frame = ttk.Frame(self.estoque_wnd, padding="10")
@@ -1790,6 +1830,11 @@ class Main:
 
         self.novo_fin_wnd.transient(self.root)
         self.novo_fin_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         frame = ttk.Frame(self.novo_fin_wnd, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -1913,6 +1958,11 @@ class Main:
         editor.geometry("600x400")
         editor.transient(self.root)
         editor.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         frame = ttk.Frame(editor, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -2009,6 +2059,11 @@ class Main:
 
         self.rel_fin_wnd.transient(self.root)
         self.rel_fin_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         # Frame principal
         main_frame = ttk.Frame(self.rel_fin_wnd, padding="10")
@@ -2193,6 +2248,11 @@ class Main:
 
         self.nova_cont_pagr_wnd.transient(self.root)
         self.nova_cont_pagr_wnd.grab_set()
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
 
         frame = ttk.Frame(self.nova_cont_pagr_wnd, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
