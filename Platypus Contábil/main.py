@@ -388,6 +388,7 @@ class Main:
 
     def selecionar_os_para_carregar(self, tree, dialog):
         """Seleciona a OS para carregar"""
+        self.nova_os()
         selected_item = tree.selection()
         if not selected_item:
             messagebox.showwarning("Atenção", "Selecione uma OS para carregar!")
@@ -728,18 +729,6 @@ class Main:
         if not messagebox.askyesno("Confirmar", "Deseja realmente limpar todos os dados?"):
             return
         
-        self.limpar_campos_os()
-        self.numero_os.set(self.gerar_numero_os())
-        self.data_emissao.set(datetime.now().strftime("%d/%m/%Y %H:%M"))
-
-    def nova_os(self):
-        """Cria uma nova OS"""
-        if not messagebox.askyesno("Confirmar", "Deseja criar uma nova OS? Todos os dados não salvos serão perdidos."):
-            return
-        
-        if self.cliente_id:
-            self.preencher_campos_os_cliente()
-            
         self.limpar_campos_os()
         self.numero_os.set(self.gerar_numero_os())
         self.data_emissao.set(datetime.now().strftime("%d/%m/%Y %H:%M"))
@@ -2323,6 +2312,7 @@ class Main:
         #OS
         menu_os = tk.Menu(menubar, tearoff=0)
         menu_os.add_command(label="Nova OS", command=self.nova_os)
+        menu_os.add_command(label="Carregar OS", command=self.carregar_os_dialog)
 
         menubar.add_cascade(label="OS", menu=menu_os)
 
@@ -2340,13 +2330,6 @@ class Main:
         menu_contas.add_command(label="Previsão de recebimentos", command=self.novo_financeiro)
 
         menubar.add_cascade(label="Contas", menu=menu_contas)
-
-        #Recibos
-       ## menu_recibos = tk.Menu(menubar, tearoff=0)
-       # menu_recibos.add_command(label="Recibos", command=self.recibos)
-       # menu_recibos.add_command(label="Novo Recibo", command=self.novo_recibo)
-
-        #menubar.add_cascade(label="Recibos", menu=menu_recibos)
 
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
@@ -2372,9 +2355,7 @@ class Main:
             ("👥 Clientes", self.rel_clientes),
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
-            ("💰 Transações", self.rel_fin),
-            ("💸 Contas", self.novo_conta_pagar),
-            #("🧾 Recibos", self.recibos)
+            ("💰 Transações", self.rel_fin)
             #("💾 Backup", self.fazer_backup)
         ]
         
