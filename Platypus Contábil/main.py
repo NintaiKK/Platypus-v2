@@ -19,6 +19,11 @@ class Main:
             root.iconbitmap("none.ico")
         except:
             pass
+        
+        self.root.option_add('*Font', ('Arial', 12))
+        self.root.option_add('*TButton.Font', ('Arial', 12))
+        self.root.option_add('*TLabel.Font', ('Arial', 12))
+        self.root.option_add('*TEntry.Font', ('Arial', 12))
 
         self.conn = sqlite3.connect('platycon.db')
         self.c = self.conn.cursor()
@@ -53,7 +58,7 @@ class Main:
             "endereco": "Rua Miguel Oresko n90",
             "cidade": "Nova Santa Rita",
             "cnpj": "61.459.722/0001-01",
-            "ie": "n lembro hehe",
+            "ie": "382/0031725",
             "telefone": "51 9 9903-6427"
         }
         
@@ -1007,10 +1012,10 @@ class Main:
         
         if cliente:
             self.cliente_id = cliente[0]
-            self.cliente_nome.set(cliente[1])
-            self.cliente_endereco.set(cliente[2])
-            self.cliente_cidade.set(cliente[3])
-            self.cliente_cpf_cnpj.set(cliente[4])
+            self.cliente_nome.set(cliente[2])
+            self.cliente_endereco.set(cliente[3])
+            self.cliente_cidade.set(cliente[4])
+            self.cliente_cpf_cnpj.set(cliente[1])
             self.cliente_telefone.set(cliente[5])
             self.cliente_email.set(cliente[6])
 
@@ -1047,8 +1052,6 @@ class Main:
         editor.title("Editar Cliente")
         editor.geometry("800x300")
         editor.resizable(False, False)
-        editor.transient(self.root)
-        editor.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1295,9 +1298,6 @@ class Main:
         self.novo_cli_wnd.title("Cadastrar Cliente")
         self.novo_cli_wnd.geometry("800x400")
         self.novo_cli_wnd.resizable(False, False)
-
-        self.novo_cli_wnd.transient(self.root)
-        self.novo_cli_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1406,9 +1406,6 @@ class Main:
         self.rel_cli_wnd = tk.Toplevel(self.root)
         self.rel_cli_wnd.title("Relátório Clientes")
         self.rel_cli_wnd.geometry("1200x500")
-
-        self.rel_cli_wnd.transient(self.root)
-        self.rel_cli_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1491,9 +1488,6 @@ class Main:
         self.novo_veiculo_wnd.title("Cadastrar Veículo")
         self.novo_veiculo_wnd.geometry("500x400")
         self.novo_veiculo_wnd.resizable(False, False)
-
-        self.novo_veiculo_wnd.transient(self.root)
-        self.novo_veiculo_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1582,9 +1576,6 @@ class Main:
         self.rel_veic_wnd.geometry("1200x500")
         self.rel_veic_wnd.resizable(False, False)
 
-        self.rel_veic_wnd.transient(self.root)
-        self.rel_veic_wnd.grab_set()
-
         # Frame principal
         main_frame = ttk.Frame(self.rel_veic_wnd, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
@@ -1653,9 +1644,6 @@ class Main:
         self.nova_peca_wnd.title("Cadastrar peça")
         self.nova_peca_wnd.geometry("500x400")
         self.nova_peca_wnd.resizable(False, False)
-
-        self.nova_peca_wnd.transient(self.root)
-        self.nova_peca_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1752,9 +1740,6 @@ class Main:
         self.estoque_wnd.title("Estoque")
         self.estoque_wnd.geometry("1200x500")
         self.estoque_wnd.resizable(False, False)
-
-        self.estoque_wnd.transient(self.root)
-        self.estoque_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1827,9 +1812,6 @@ class Main:
         self.novo_fin_wnd.title("Cadastrar Transação")
         self.novo_fin_wnd.geometry("800x400")
         self.novo_fin_wnd.resizable(True, True)
-
-        self.novo_fin_wnd.transient(self.root)
-        self.novo_fin_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -1956,8 +1938,6 @@ class Main:
         editor = tk.Toplevel(self.root)
         editor.title("Editar Transação")
         editor.geometry("600x400")
-        editor.transient(self.root)
-        editor.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -2056,9 +2036,6 @@ class Main:
         self.rel_fin_wnd.title("Movimentações")
         self.rel_fin_wnd.geometry("1200x500")
         self.rel_fin_wnd.resizable(True, True)
-
-        self.rel_fin_wnd.transient(self.root)
-        self.rel_fin_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -2245,9 +2222,6 @@ class Main:
         self.nova_cont_pagr_wnd = tk.Toplevel(self.root)
         self.nova_cont_pagr_wnd.title("Registrar conta a pagar")
         self.nova_cont_pagr_wnd.geometry("800x400")
-
-        self.nova_cont_pagr_wnd.transient(self.root)
-        self.nova_cont_pagr_wnd.grab_set()
         
         try:
             root.iconbitmap("none.ico")
@@ -2384,12 +2358,12 @@ class Main:
         menubar.add_cascade(label="Financeiro", menu=menu_financeiro)
 
         #Contas
-        menu_contas = tk.Menu(menubar, tearoff=0)
-        menu_contas.add_command(label="Contas a pagar", command=self.novo_conta_pagar)
-        menu_contas.add_command(label="Contas a receber", command=self.novo_financeiro)
-        menu_contas.add_command(label="Previsão de recebimentos", command=self.novo_financeiro)
+        #menu_contas = tk.Menu(menubar, tearoff=0)
+        #menu_contas.add_command(label="Contas a pagar", command=self.novo_conta_pagar)
+        #menu_contas.add_command(label="Contas a receber", command=self.novo_financeiro)
+        #menu_contas.add_command(label="Previsão de recebimentos", command=self.novo_financeiro)
 
-        menubar.add_cascade(label="Contas", menu=menu_contas)
+        #menubar.add_cascade(label="Contas", menu=menu_contas)
 
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="20")
