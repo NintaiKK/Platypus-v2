@@ -58,7 +58,7 @@ class Main:
             "endereco": "Rua Miguel Oresko n90",
             "cidade": "Nova Santa Rita",
             "cnpj": "61.459.722/0001-01",
-            "ie": "382/0031725",
+            "ie": "n lembro hehe",
             "telefone": "51 9 9903-6427"
         }
         
