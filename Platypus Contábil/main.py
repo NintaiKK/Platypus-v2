@@ -8,6 +8,9 @@ from tkinter import ttk, messagebox
 import os
 import csv
 import json
+import requests
+import xml.etree.ElementTree as ET
+import base64
 
 class Main:
     def __init__(self, root):
@@ -34,6 +37,7 @@ class Main:
         self.criar_tabela_pecas()
         self.criar_tabela_financeiro()
         self.criar_tabela_contas_pagar()
+        self.criar_tabela_notas()
     
         
         # Variáveis para os dados do cliente
@@ -177,6 +181,23 @@ class Main:
         """Gera um número fictício de OS baseado na data/hora"""
         return datetime.now().strftime("%Y%m%d%H%M")
     
+    def criar_tabela_notas(self):
+        try:
+            self.c.execute('''
+                CREATE TABLE IF NOT EXISTS nota (
+                    id
+                )
+            ''')
+            self.c.execute('''
+                CREATE TABLE IF NOT EXISTS nota (
+                    id
+                )
+            ''')
+            self.conn.commit()
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar tabela notas: {str(e)}")
+    
     def criar_tabela_ordens_servico(self):
         try:
             self.c.execute('''
@@ -315,6 +336,11 @@ class Main:
         """Pesquisa transações conforme texto digitado"""
         filtro = self.entry_pesquisa_oper.get()
         self.carregar_lista_financeiro(filtro)
+
+    def pesquisar_nota(self, event=None):
+        """Pesquisa veiculos conforme texto digitado"""
+        filtro = self.entry_pesquisa_nota.get()
+        self.carregar_lista_nota(filtro)
 
     def carregar_os_dialog(self):
         #Abre diálogo para selecionar uma OS para carregar
@@ -2311,6 +2337,432 @@ class Main:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao salvar conta: {str(e)}")
 
+    def buscar_os_para_nfse(self, tree_os, cliente_entry, itens_text):
+        """Busca OS no banco e preenche dados automaticamente"""
+        selected = tree_os.selection()
+        if not selected:
+            messagebox.showwarning("Atenção", "Selecione uma OS!")
+            return
+        
+        os_id = tree_os.item(selected[0])['values'][0]
+        
+        # Buscar dados da OS
+        self.c.execute('''SELECT os.*, c.nome, c.cnpj, c.endereco, c.cidade, c.telefone, c.email 
+                    FROM ordens_servico os 
+                    JOIN clientes c ON os.cliente_id = c.id 
+                    WHERE os.id=?''', (os_id,))
+        os_data = self.c.fetchone()
+        
+        # Buscar itens da OS
+        self.c.execute('''SELECT descricao, quantidade, valor_unitario, valor_total 
+                    FROM itens_os WHERE os_id=?''', (os_id,))
+        itens = self.c.fetchall()
+        
+        # Preencher dados
+        cliente_entry.delete(0, tk.END)
+        cliente_entry.insert(0, f"{os_data[2]} - {os_data[1]}")
+        
+        # Preencher itens no texto
+        itens_text.delete('1.0', tk.END)
+        for item in itens:
+            itens_text.insert(tk.END, f"{item[0]} - Qtd: {item[1]} - R$ {item[3]:.2f}\n")
+        
+        self.os_selecionada = {
+            'id': os_id,
+            'cliente_id': os_data[1],
+            'itens': itens,
+            'valor_total': os_data[6]
+        }
+
+    def emitir_nfse(self):
+        
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Emitir NFS-e - Nova Santa Rita")
+        dialog.geometry("600x400")
+        
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        ttk.Label(main_frame, text="Item da Lista de Serviço:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        item_lista = ttk.Combobox(main_frame, values=['14.01', '14.02', '14.03', '14.04', '14.05'])
+        item_lista.set('14.01')
+        item_lista.grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        ttk.Label(main_frame, text="Discriminação do Serviço:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        discriminacao = ttk.Entry(main_frame, width=50)
+        discriminacao.insert(0, "Serviços de mecânica diesel e manutenção veicular")
+        discriminacao.grid(row=1, column=1, sticky=tk.W, pady=5)
+        
+        ttk.Label(main_frame, text="Usuário/CNPJ:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        usuario_entry = ttk.Entry(main_frame, width=30)
+        usuario_entry.insert(0, self.dados_empresa['cnpj'].replace('.', '').replace('/', '').replace('-', ''))
+        usuario_entry.grid(row=2, column=1, sticky=tk.W, pady=5)
+        
+        ttk.Label(main_frame, text="Senha:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        senha_entry = ttk.Entry(main_frame, width=30, show="*")
+        senha_entry.grid(row=3, column=1, sticky=tk.W, pady=5)
+        
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.grid(row=4, column=0, columnspan=2, pady=20)
+        
+        ttk.Button(btn_frame, text="Emitir NFS-e", 
+                command=lambda: self.processar_emissao_nfse(
+                    item_lista.get(),
+                    discriminacao.get(),
+                    usuario_entry.get(),
+                    senha_entry.get(),
+                    dialog
+                )).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(btn_frame, text="Cancelar", 
+                command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+    def processar_emissao_nfse(self, item_lista, discriminacao, usuario, senha, dialog, os_selecionada):
+        """Processa a emissão da NFS-e usando OS selecionada"""
+        if not os_selecionada:
+            messagebox.showwarning("Atenção", "Selecione uma OS!")
+            return
+        
+        try:
+            # Gerar XML da NFS-e
+            xml_nfse = self.gerar_xml_nfse(item_lista, discriminacao)
+            
+            # Enviar para Web Service
+            resultado = self.enviar_nfse_webservice(xml_nfse, usuario, senha)
+            
+            if resultado['sucesso']:
+                messagebox.showinfo("Sucesso", "NFS-e emitida com sucesso!")
+                self.salvar_xml_nfse(xml_nfse)
+                dialog.destroy()
+            else:
+                messagebox.showerror("Erro", f"Falha na emissão: {resultado.get('erro', 'Erro desconhecido')}")
+                
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao processar emissão: {str(e)}")
+
+    def gerar_xml_nfse(self, item_lista, discriminacao, os_selecionada):
+        #"""Gera XML no padrão ABRASF para Nova Santa Rita"""
+        import xml.etree.ElementTree as ET
+        from datetime import datetime
+        
+        # Namespace
+        ns_map = {'nfse': 'http://www.abrasf.org.br/nfse.xsd'}
+        
+        # Elemento raiz
+        root = ET.Element('nfse:GerarNfseEnvio')
+        
+        # RPS
+        rps = ET.SubElement(root, 'nfse:Rps')
+        
+        # Identificação RPS
+        identificacao_rps = ET.SubElement(rps, 'nfse:IdentificacaoRps')
+        numero_rps = datetime.now().strftime("%Y%m%d%H%M%S")
+        ET.SubElement(identificacao_rps, 'nfse:Numero').text = numero_rps
+        ET.SubElement(identificacao_rps, 'nfse:Serie').text = "1"
+        ET.SubElement(identificacao_rps, 'nfse:Tipo').text = "1"
+        
+        # Data e Status
+        ET.SubElement(rps, 'nfse:DataEmissao').text = datetime.now().strftime("%Y-%m-%d")
+        ET.SubElement(rps, 'nfse:Status').text = "1"
+        
+        # Serviço
+        servico = ET.SubElement(root, 'nfse:Servico')
+        valores_servico = ET.SubElement(servico, 'nfse:Valores')
+        
+        # Calcular totais
+        valor_servicos = sum(item[4] for item in self.os_selecionada)
+        ET.SubElement(valores_servico, 'nfse:ValorServicos').text = f"{valor_servicos:.2f}"
+        ET.SubElement(valores_servico, 'nfse:ValorDeducoes').text = "0.00"
+        ET.SubElement(valores_servico, 'nfse:IssRetido').text = "2"
+        ET.SubElement(valores_servico, 'nfse:ValorIss').text = "0.00"
+        ET.SubElement(valores_servico, 'nfse:BaseCalculo').text = f"{valor_servicos:.2f}"
+        ET.SubElement(valores_servico, 'nfse:Aliquota').text = "0.00"
+        ET.SubElement(valores_servico, 'nfse:ValorLiquidoNfse').text = f"{valor_servicos:.2f}"
+        
+        # Item e discriminação
+        ET.SubElement(servico, 'nfse:ItemListaServico').text = item_lista
+        ET.SubElement(servico, 'nfse:Discriminacao').text = discriminacao
+        ET.SubElement(servico, 'nfse:CodigoMunicipio').text = "431337"  # Nova Santa Rita
+        
+        # Prestador (sua empresa)
+        prestador = ET.SubElement(root, 'nfse:Prestador')
+        identificacao_prestador = ET.SubElement(prestador, 'nfse:IdentificacaoPrestador')
+        cpf_cnpj_prestador = ET.SubElement(identificacao_prestador, 'nfse:CpfCnpj')
+        ET.SubElement(cpf_cnpj_prestador, 'nfse:Cnpj').text = self.dados_empresa['cnpj'].replace('.', '').replace('/', '').replace('-', '')
+        ET.SubElement(identificacao_prestador, 'nfse:InscricaoMunicipal').text = self.dados_empresa.get('im', '0000000')
+        
+        # Tomador (cliente)
+        tomador = ET.SubElement(root, 'nfse:Tomador')
+        identificacao_tomador = ET.SubElement(tomador, 'nfse:IdentificacaoTomador')
+        cpf_cnpj_tomador = ET.SubElement(identificacao_tomador, 'nfse:CpfCnpj')
+        
+        cnpj_cliente = self.cliente_cpf_cnpj.get().replace('.', '').replace('/', '').replace('-', '')
+        if len(cnpj_cliente) == 14:
+            ET.SubElement(cpf_cnpj_tomador, 'nfse:Cnpj').text = cnpj_cliente
+        else:
+            ET.SubElement(cpf_cnpj_tomador, 'nfse:Cpf').text = cnpj_cliente
+        
+        ET.SubElement(tomador, 'nfse:RazaoSocial').text = self.cliente_nome.get()
+        
+        # Endereço tomador
+        endereco_tomador = ET.SubElement(tomador, 'nfse:Endereco')
+        ET.SubElement(endereco_tomador, 'nfse:Endereco').text = self.cliente_endereco.get()
+        ET.SubElement(endereco_tomador, 'nfse:Numero').text = "S/N"
+        ET.SubElement(endereco_tomador, 'nfse:Bairro').text = "Centro"
+        ET.SubElement(endereco_tomador, 'nfse:CodigoMunicipio').text = "431337"
+        ET.SubElement(endereco_tomador, 'nfse:Uf').text = "RS"
+        ET.SubElement(endereco_tomador, 'nfse:Cep').text = "92400000"
+        
+        # Contato
+        contato = ET.SubElement(tomador, 'nfse:Contato')
+        telefone = self.cliente_telefone.get().replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        ET.SubElement(contato, 'nfse:Telefone').text = telefone
+        ET.SubElement(contato, 'nfse:Email').text = self.cliente_email.get()
+        
+        # Outras informações
+        ET.SubElement(root, 'nfse:OptanteSimplesNacional').text = "1"
+        ET.SubElement(root, 'nfse:IncentivoFiscal').text = "2"
+        
+        # Converter para XML string
+        xml_str = ET.tostring(root, encoding='utf-8', method='xml').decode()
+        xml_final = f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
+        
+        return xml_final
+
+    def enviar_nfse_webservice(self, xml_nfse, usuario, senha):
+        #"""Envia XML para Web Service da prefeitura"""
+        import requests
+        
+        try:
+            url = "https://ws-novasantarita.atende.net:7443/?pg=services&service=WNENotaFiscalEletronicaNfe&cidade=padrao"
+            
+            headers = {
+                'Content-Type': 'application/xml',
+                'User-Agent': 'Platypus-Sistema/2.0'
+            }
+            
+            response = requests.post(
+                url,
+                data=xml_nfse.encode('utf-8'),
+                headers=headers,
+                auth=(usuario, senha),
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                return {
+                    'sucesso': True,
+                    'resposta': response.text,
+                    'xml_enviado': xml_nfse
+                }
+            else:
+                return {
+                    'sucesso': False,
+                    'erro': f"Erro HTTP {response.status_code}",
+                    'resposta': response.text
+                }
+                
+        except requests.exceptions.RequestException as e:
+            return {
+                'sucesso': False,
+                'erro': f"Erro de conexão: {str(e)}"
+            }
+        except Exception as e:
+            return {
+                'sucesso': False,
+                'erro': f"Erro interno: {str(e)}"
+            }
+
+    def salvar_xml_nfse(self, xml_content):
+        """Salva o XML da NFS-e emitida"""
+        try:
+            import os
+            from datetime import datetime
+            
+            os.makedirs("nfse_emitidas", exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"nfse_emitidas/NFS-e_{self.numero_os.get()}_{timestamp}.xml"
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(xml_content)
+                
+            return filename
+        except Exception as e:
+            print(f"Erro ao salvar XML: {e}")
+            return None
+
+    def consultar_nfse_emitida(self):
+        """Consulta NFS-e já emitida"""
+        from tkinter import simpledialog
+        
+        numero = simpledialog.askstring("Consultar NFS-e", "Número da NFS-e:")
+        if numero:
+            usuario = simpledialog.askstring("Autenticação", "Usuário/CNPJ:")
+            senha = simpledialog.askstring("Autenticação", "Senha:", show='*')
+            
+            if usuario and senha:
+                resultado = self.consultar_nfse_webservice(numero, usuario, senha)
+                
+                if resultado['sucesso']:
+                    messagebox.showinfo("Consulta NFS-e", f"Resposta: {resultado['resposta']}")
+                else:
+                    messagebox.showerror("Erro", f"Falha na consulta: {resultado.get('erro', 'Erro desconhecido')}")
+
+    def consultar_nfse_webservice(self, numero_nfse, usuario, senha):
+        """Consulta NFS-e no Web Service"""
+        import requests
+        import xml.etree.ElementTree as ET
+        
+        try:
+            # Gerar XML de consulta
+            root = ET.Element('nfse:ConsultarNfseEnvio')
+            ET.SubElement(root, 'nfse:NumeroNfse').text = numero_nfse
+            
+            xml_str = ET.tostring(root, encoding='utf-8', method='xml').decode()
+            xml_consulta = f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
+            
+            url = "https://ws-novasantarita.atende.net:7443/?pg=services&service=WNENotaFiscalEletronicaNfe&cidade=padrao"
+            
+            headers = {'Content-Type': 'application/xml'}
+            
+            response = requests.post(
+                url,
+                data=xml_consulta.encode('utf-8'),
+                headers=headers,
+                auth=(usuario, senha),
+                timeout=30
+            )
+            
+            return {
+                'sucesso': response.status_code == 200,
+                'resposta': response.text
+            }
+            
+        except Exception as e:
+            return {
+                'sucesso': False,
+                'erro': str(e)
+            }
+
+    def visualizar_xml_nfse(self):
+        """Abre diálogo para visualizar XMLs de NFS-e emitidas"""
+        import os
+        import tkinter.filedialog as filedialog
+        
+        if not os.path.exists("nfse_emitidas"):
+            messagebox.showinfo("Informação", "Nenhuma NFS-e emitida ainda.")
+            return
+        
+        dialog = tk.Toplevel(self.root)
+        dialog.title("NFS-e Emitidas")
+        dialog.geometry("800x600")
+        
+        main_frame = ttk.Frame(dialog, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Lista de arquivos
+        arquivos = [f for f in os.listdir("nfse_emitidas") if f.endswith('.xml')]
+        
+        if not arquivos:
+            ttk.Label(main_frame, text="Nenhuma NFS-e encontrada.").pack(pady=20)
+        else:
+            listbox = tk.Listbox(main_frame, width=80, height=15)
+            listbox.pack(fill=tk.BOTH, expand=True, pady=10)
+            
+            for arquivo in arquivos:
+                listbox.insert(tk.END, arquivo)
+            
+            def abrir_xml():
+                selecionado = listbox.curselection()
+                if selecionado:
+                    arquivo = arquivos[selecionado[0]]
+                    caminho = os.path.join("nfse_emitidas", arquivo)
+                    os.system(f'notepad.exe "{caminho}"')
+            
+            btn_frame = ttk.Frame(main_frame)
+            btn_frame.pack(fill=tk.X, pady=10)
+            
+            ttk.Button(btn_frame, text="Abrir XML", command=abrir_xml).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Fechar", command=dialog.destroy).pack(side=tk.RIGHT, padx=5)
+
+    #Carregar Lista
+    def carregar_lista_nota(self, filtro=None):
+
+        # Limpa a treeview
+        for item in self.tree_nota.get_children():
+            self.tree_nota.delete(item)
+            
+        # Consulta os clientes no banco de dados
+        if filtro:
+            self.c.execute('''SELECT id 
+                                FROM nota 
+                                WHERE id LIKE ? OR id LIKE ? 
+                                ORDER BY id''', (f'%{filtro}%', f'%{filtro}%'))
+        else:
+            self.c.execute('''SELECT id 
+                                FROM nota 
+                                ORDER BY id''')
+            
+        notas = self.c.fetchall()
+            
+        # Adiciona os clientes na treeview
+        for nota in notas:
+            self.tree_nota.insert('', tk.END, values=nota)
+
+    def notas(self):
+
+        self.notas_wnd = tk.Toplevel(self.root)
+        self.notas_wnd.title("Notas")
+        self.notas_wnd.geometry("1200x500")
+        self.notas_wnd.resizable(False, False)
+        
+        try:
+            root.iconbitmap("none.ico")
+        except:
+            pass
+
+        # Frame principal
+        main_frame = ttk.Frame(self.notas_wnd, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de pesquisa
+        frame_pesq_nota = ttk.Frame(main_frame)
+        frame_pesq_nota.pack(fill=tk.X, pady=5)
+            
+        ttk.Label(frame_pesq_nota, text="Pesquisar:").pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_nota = ttk.Entry(frame_pesq_nota, width=30)
+        self.entry_pesquisa_nota.pack(side=tk.LEFT, padx=5)
+        self.entry_pesquisa_nota.bind("<KeyRelease>", self.pesquisar_nota)
+            
+        ttk.Button(frame_pesq_nota, text="Emitir NFSE", 
+            command=self.emitir_nfse).pack(side=tk.RIGHT, padx=5)
+            
+        ttk.Button(frame_pesq_nota, text="Emitir NFE", 
+            command=self.nova_peca).pack(side=tk.RIGHT, padx=5)
+            
+        columns = ('id')
+        self.tree_nota = ttk.Treeview(main_frame, columns=columns, show='headings', height=15)
+            
+        # Cabeçalhos
+        self.tree_nota.heading('id', text='ID')
+            
+        # Largura das colunas
+        self.tree_nota.column('id', width=50, anchor=tk.CENTER)
+            
+        self.tree_nota.pack(fill=tk.BOTH, expand=True)
+            
+        # Barra de rolagem
+        scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.tree_nota.yview)
+        self.tree_nota.configure(yscroll=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+        # Botões de ação
+        frame_botoes = ttk.Frame(main_frame)
+        frame_botoes.pack(fill=tk.X, pady=10)
+            
+        # Carrega a lista de veículos
+        self.carregar_lista_nota()
+
     def criar_widgets(self):
         # Frame principal que contém o canvas e a scrollbar
         main_frame = ttk.Frame(self.root)
@@ -2357,6 +2809,22 @@ class Main:
 
         menubar.add_cascade(label="Financeiro", menu=menu_financeiro)
 
+        #Notas
+        menu_notas = tk.Menu(menubar, tearoff=0)
+        #menu_notas.add_command(label="Emitir NFSE", command=self.emit_nfse)
+        menu_notas.add_command(label="Visualizar Notas", command=self.notas)
+
+        menubar.add_cascade(label="Financeiro", menu=menu_notas)
+
+                #Notas
+        menu_notas = tk.Menu(menubar, tearoff=0)
+        menu_notas.add_command(label="Visualizar Notas", command=self.notas)
+        menu_notas.add_command(label="Emitir NFS-e", command=self.emitir_nfse)  # Já independente
+        menu_notas.add_command(label="Consultar NFS-e", command=self.consultar_nfse_emitida)
+        menu_notas.add_command(label="Visualizar XMLs", command=self.visualizar_xml_nfse)
+
+        menubar.add_cascade(label="Notas Fiscais", menu=menu_notas)
+
         #Contas
         #menu_contas = tk.Menu(menubar, tearoff=0)
         #menu_contas.add_command(label="Contas a pagar", command=self.novo_conta_pagar)
@@ -2389,7 +2857,8 @@ class Main:
             ("👥 Clientes", self.rel_clientes),
             ("🚗 Veículos", self.rel_veiculos),
             ("🔧 Estoque", self.estoque),
-            ("💰 Transações", self.rel_fin)
+            ("💰 Transações", self.rel_fin),
+            ("🔧 Emissão de Notas", self.notas)
             #("💾 Backup", self.fazer_backup)
         ]
         
@@ -2404,7 +2873,7 @@ class Main:
         self.status_label = ttk.Label(status_frame, text="Sistema pronto - Banco de dados conectado")
         self.status_label.pack()
         
-        self.versao_label = ttk.Label(status_frame, text="Versão 2.0.29")
+        self.versao_label = ttk.Label(status_frame, text="Versão 2.1.01")
         self.versao_label.pack()
 
 if __name__ == "__main__":
