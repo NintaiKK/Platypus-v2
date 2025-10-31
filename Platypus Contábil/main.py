@@ -991,6 +991,37 @@ class Main:
             messagebox.showinfo("Sucesso", "Cliente excluído com sucesso!")
         except Exception as e:
             messagebox.showerror("Erro", f"Ocorreu um erro ao excluir o cliente: {e}")
+
+    def excluir_veiculo(self):
+        """Exclui o veículo selecionado na lista"""
+        selected_item = self.tree_veiculos.selection()
+        if not selected_item:
+            messagebox.showwarning("Atenção", "Selecione um veiculo para excluir!")
+            return
+        
+        veiculo_id = self.tree_veiculos.item(selected_item)['values'][0]
+        veiculo_placa = self.tree_veiculos.item(selected_item)['values'][2]
+        
+        if not messagebox.askyesno("Confirmar", f"Tem certeza que deseja excluir o cliente {veiculo_placa}?"):
+            return
+        
+        try:
+            # Verifica se existem ordens de serviço para este cliente
+            self.c.execute("SELECT COUNT(*) FROM ordens_servico WHERE veiculo_id=?", (veiculo_id,))
+            if self.c.fetchone()[0] > 0:
+                messagebox.showerror("Erro", "Este cliente possui ordens de serviço vinculadas e não pode ser excluído!")
+                return
+            
+            # Exclui o cliente
+            self.c.execute("DELETE FROM veiculos WHERE id=?", (veiculo_id,))
+            self.conn.commit()
+            
+            # Atualiza a lista de clientes
+            self.carregar_lista_veiculos()
+            
+            messagebox.showinfo("Sucesso", "Veículo excluído com sucesso!")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro ao excluir o veiculo: {e}")
     
     def selecionar_cliente_na_lista(self, window):
         """Seleciona o cliente da lista para a ordem de serviço"""
@@ -1219,6 +1250,34 @@ class Main:
                 
         except tk.TclError as e:
             messagebox.showerror("Erro", f"Erro ao acessar a lista de clientes: {e}")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro inesperado: {e}")
+
+    def editar_veiculo(self):
+        """Edita o VEICULO selecionado na lista"""
+        try:
+            # Verifica se a treeview existe e está disponível
+            if not hasattr(self, 'tree_veiculos') or not self.tree_veiculos.winfo_exists():
+                messagebox.showwarning("Atenção", "Lista de veículos não disponível. Abra a lista de veículos primeiro!")
+                return
+            
+            selected_item = self.tree_veiculos.selection()
+            if not selected_item:
+                messagebox.showwarning("Atenção", "Selecione um cliente para editar!")
+                return
+            
+            veiculo_id = self.tree_veiculos.item(selected_item)['values'][0]
+            self.c.execute("SELECT * FROM veiculos WHERE id=?", (veiculo_id,))
+            veiculo_data = self.c.fetchone()
+            
+            if veiculo_data:
+                # Abre janela de edição com dados pré-carregados
+                self.abrir_editor_veiculo(veiculo_data)
+            else:
+                messagebox.showerror("Erro", "Veículo não encontrado!")
+                
+        except tk.TclError as e:
+            messagebox.showerror("Erro", f"Erro ao acessar a lista de veículos: {e}")
         except Exception as e:
             messagebox.showerror("Erro", f"Ocorreu um erro inesperado: {e}")
 
@@ -1653,10 +1712,10 @@ class Main:
                   command=lambda: self.selecionar_veiculo_na_lista(self.rel_veic_wnd)).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(frame_botoes, text="Editar", 
-                  command=self.editar_cliente).pack(side=tk.LEFT, padx=5)
+                  command=self.editar_veiculo).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(frame_botoes, text="Excluir", 
-                  command=self.excluir_cliente).pack(side=tk.LEFT, padx=5)
+                  command=self.excluir_veiculo).pack(side=tk.LEFT, padx=5)
         
         ttk.Button(frame_botoes, text="Fechar", 
                   command=self.rel_veic_wnd.destroy).pack(side=tk.RIGHT, padx=5)
